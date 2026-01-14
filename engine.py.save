@@ -1,0 +1,385 @@
+# pricing_engine_v2.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from typing import Dict, Union, Tuple
+import math
+
+
+# -----------------------------------
+# 1) BASE DE DADOS (RS / SP)
+# -----------------------------------
+# custo_hora = "Com hora útil"
+# preco_hora = "Preço Hora"
+ROLE_RATES: Dict[str, Dict[str, Dict[str, float]]] = {
+    "RS": {
+        "GER_TEC_II": {"custo_hora": 314.71, "preco_hora": 1227.38},
+        "GER_TEC_I":  {"custo_hora": 278.34, "preco_hora": 1085.54},
+        "LIDER_II":   {"custo_hora": 246.97, "preco_hora": 963.19},
+        "LIDER_I":    {"custo_hora": 219.91, "preco_hora": 857.65},
+        "SUP_II":     {"custo_hora": 196.57, "preco_hora": 766.61},
+        "SUP_I":      {"custo_hora": 176.43, "preco_hora": 688.07},
+        "SENIOR_A":   {"custo_hora": 162.30, "preco_hora": 632.96},
+        "SENIOR_B":   {"custo_hora": 150.23, "preco_hora": 585.90},
+        "PLENO_A":    {"custo_hora": 137.31, "preco_hora": 535.49},
+        "PLENO_B":    {"custo_hora": 123.16, "preco_hora": 480.32},
+        "JUNIOR":     {"custo_hora": 110.13, "preco_hora": 429.51},
+        "ASSIST":     {"custo_hora": 87.52,  "preco_hora": 341.35},
+    },
+    "SP": {
+        "GER_TEC_II": {"custo_hora": 367.66, "preco_hora": 1433.86},
+        "GER_TEC_I":  {"custo_hora": 324.01, "preco_hora": 1263.65},
+        "LIDER_II":   {"custo_hora": 286.37, "preco_hora": 1116.83},
+        "LIDER_I":    {"custo_hora": 253.89, "preco_hora": 990.18},
+        "SUP_II":     {"custo_hora": 225.88, "preco_hora": 880.93},
+        "SUP_I":      {"custo_hora": 201.71, "preco_hora": 786.69},
+        "SENIOR_A":   {"custo_hora": 184.76, "preco_hora": 720.55},
+        "SENIOR_B":   {"custo_hora": 170.28, "preco_hora": 664.08},
+        "PLENO_A":    {"custo_hora": 154.77, "preco_hora": 603.59},
+        "PLENO_B":    {"custo_hora": 137.79, "preco_hora": 537.38},
+        "JUNIOR":     {"custo_hora": 122.16, "preco_hora": 476.41},
+        "ASSIST":     {"custo_hora": 95.03,  "preco_hora": 370.62},
+    }
+}
+
+ROLE_LABELS = {
+    "GER_TEC_II": "Gerente Técnico II / Gerente Sr. II",
+    "GER_TEC_I":  "Gerente Técnico I / Gerente Sr. I",
+    "LIDER_II":   "Líder Técnico II / Gerente II",
+    "LIDER_I":    "Líder Técnico I / Gerente I",
+    "SUP_II":     "Supervisor II / Coordenador II",
+    "SUP_I":      "Supervisor I / Coordenador I",
+    "SENIOR_A":   "Consultor Sênior A",
+    "SENIOR_B":   "Consultor Sênior B",
+    "PLENO_A":    "Consultor Pleno A",
+    "PLENO_B":    "Consultor Pleno B",
+    "JUNIOR":     "Consultor Júnior",
+    "ASSIST":     "Assistente",
+}
+
+
+# -----------------------------------
+# 2) PARÂMETROS DO MOTOR (EDITÁVEIS)
+# -----------------------------------
+# ✅ Suas bases reais (horas)
+BASE_HOURS = {
+    "baixa": 60.0,
+    "media": 120.0,
+    "alta": 240.0,
+    "altissima": 480.0,
+}
+
+# Prazos base (dias corridos) — calibráveis
+BASE_DAYS = {
+    "baixa": 10,
+    "media": 20,
+    "alta": 35,
+    "altissima": 60,
+}
+
+SCOPE_MULT = {
+    "super_fechado": 0.85,
+    "fechado": 1.00,
+    "aberto": 1.25,
+}
+
+# Perfis A–H: multiplica esforço (horas) e preço (valor percebido)
+PROFILE_HOURS_MULT = {
+    "A": 1.20, "B": 1.15, "C": 1.10, "D": 1.05,
+    "E": 1.00, "F": 0.95, "G": 0.90, "H": 0.85,
+}
+PROFILE_PRICE_MULT = {
+    "A": 1.25, "B": 1.20, "C": 1.15, "D": 1.10,
+    "E": 1.05, "F": 1.00, "G": 0.95, "H": 0.90,
+}
+
+# Mix de equipe por complexidade (pesos somam 1.0) — calibrável
+TEAM_MIX = {
+    "baixa": {
+        "SUP_I": 0.06, "SENIOR_B": 0.12,
+        "PLENO_B": 0.35, "JUNIOR": 0.37, "ASSIST": 0.10
+    },
+    "media": {
+        "SUP_II": 0.08, "SUP_I": 0.07,
+        "SENIOR_A": 0.18, "SENIOR_B": 0.12,
+        "PLENO_A": 0.25, "PLENO_B": 0.18,
+        "JUNIOR": 0.10, "ASSIST": 0.02
+    },
+    "alta": {
+        "GER_TEC_I": 0.07, "LIDER_II": 0.10, "LIDER_I": 0.08,
+        "SUP_II": 0.10, "SUP_I": 0.07,
+        "SENIOR_A": 0.22, "SENIOR_B": 0.12,
+        "PLENO_A": 0.14, "PLENO_B": 0.06,
+        "JUNIOR": 0.03, "ASSIST": 0.01
+    },
+    "altissima": {
+        "GER_TEC_II": 0.06, "GER_TEC_I": 0.10,
+        "LIDER_II": 0.12, "LIDER_I": 0.10,
+        "SUP_II": 0.10, "SUP_I": 0.06,
+        "SENIOR_A": 0.22, "SENIOR_B": 0.12,
+        "PLENO_A": 0.08, "PLENO_B": 0.03,
+        "JUNIOR": 0.01, "ASSIST": 0.00
+    }
+}
+
+# Embutidos padrão
+PROJECT_MGMT_PCT_ON_HOURS = 0.08   # +8% horas (gestão/QA)
+RISK_CONTINGENCY_PCT = 0.05        # +5% no custo (imprevistos)
+
+# Pisos opcionais por complexidade (se quiser travar mínimo comercial)
+MIN_FEE_BY_COMPLEXITY = {
+    "baixa": 0.0,
+    "media": 0.0,
+    "alta": 0.0,
+    "altissima": 0.0,
+}
+
+
+# -----------------------------------
+# 3) MODELOS DE ENTRADA / SAÍDA
+# -----------------------------------
+@dataclass
+class PricingInput:
+    praca: str                       # "RS" ou "SP"
+    perfil_empresa: str              # "A"..."H"
+    complexidade: str                # baixa|media|alta|altissima
+    escopo: str                      # super_fechado|fechado|aberto
+    prazo: Union[int, date]          # dias corridos OU data final
+    descricao_detalhada: str
+
+
+@dataclass
+class PricingOutput:
+    custo_entrega: float
+    preco_venda: float
+    horas_por_categoria: Dict[str, float]
+    escopo_para_proposta: str
+    prazo_estimado_dias: int
+    multiplicadores: Dict[str, float]
+
+
+# -----------------------------------
+# 4) UTILITÁRIOS
+# -----------------------------------
+def _round_money(v: float) -> float:
+    return float(f"{v:.2f}")
+
+def _round_hours(v: float) -> float:
+    # arredonda para 0.5h (prática comercial)
+    return math.ceil(v * 2) / 2.0
+
+def _parse_prazo(prazo: Union[int, date]) -> Tuple[int, Union[None, date]]:
+    if isinstance(prazo, int):
+        return max(1, prazo), None
+    if isinstance(prazo, date):
+        today = date.today()
+        delta = (prazo - today).days
+        return max(1, delta), prazo
+    raise ValueError("prazo deve ser int (dias) ou datetime.date (data final)")
+
+def _urgency_multiplier(days_available: int, baseline_days: int) -> float:
+    """
+    Premium de urgência:
+      <=50% do prazo base => 1.35
+      <=70% do prazo base => 1.20
+      >=130% do prazo base => 0.95
+      senão => 1.00
+    """
+    if days_available <= max(1, int(baseline_days * 0.50)):
+        return 1.35
+    if days_available <= max(1, int(baseline_days * 0.70)):
+        return 1.20
+    if days_available >= int(baseline_days * 1.30):
+        return 0.95
+    return 1.00
+
+def _shift_seniority_for_urgency(mix: Dict[str, float], urgency_mult: float) -> Dict[str, float]:
+    if urgency_mult <= 1.00:
+        return dict(mix)
+
+    senior_roles = {"GER_TEC_II", "GER_TEC_I", "LIDER_II", "LIDER_I", "SUP_II", "SUP_I", "SENIOR_A", "SENIOR_B"}
+    junior_roles = {"PLENO_A", "PLENO_B", "JUNIOR", "ASSIST"}
+
+    boosted = {}
+    for r, w in mix.items():
+        if r in senior_roles:
+            boosted[r] = w * (1.0 + (urgency_mult - 1.0) * 0.60)
+        elif r in junior_roles:
+            boosted[r] = w * (1.0 - (urgency_mult - 1.0) * 0.40)
+        else:
+            boosted[r] = w
+
+    total = sum(max(0.0, w) for w in boosted.values())
+    if total <= 0:
+        return dict(mix)
+    return {r: max(0.0, w) / total for r, w in boosted.items()}
+
+def _scope_template(complexidade: str, escopo: str, descricao: str) -> str:
+    blocos_base = {
+        "baixa": [
+            "Levantamento e entendimento da demanda com validação de premissas.",
+            "Análise técnica objetiva e recomendações práticas.",
+            "1 reunião de alinhamento para fechamento e próximos passos."
+        ],
+        "media": [
+            "Kick-off e mapeamento detalhado de premissas, documentos e stakeholders.",
+            "Análise técnica com trilha de decisões, riscos e alternativas.",
+            "Entrega de documento executivo + roteiro de implementação.",
+            "Até 2 rodadas de alinhamento e ajustes."
+        ],
+        "alta": [
+            "Kick-off formal, mapeamento de processos e construção de premissas controladas.",
+            "Análise técnica aprofundada (riscos, cenários e impactos).",
+            "Entrega: diagnóstico + plano de ação + materiais de suporte.",
+            "Até 3 rodadas de alinhamento e validações com decisores."
+        ],
+        "altissima": [
+            "Kick-off executivo com governança (ritual, responsáveis e trilhas).",
+            "Mapeamento de processos, dados e premissas com validações controladas.",
+            "Análises e simulações em múltiplos cenários com plano de implementação.",
+            "Entrega completa: diagnóstico + plano + documentação de suporte + handover.",
+            "Ritual de governança e checkpoints (até 5 rodadas, conforme cronograma)."
+        ],
+    }
+
+    clausulas_escopo = {
+        "super_fechado": "Escopo SUPER FECHADO: inclui apenas o descrito; variações exigem aditivo.",
+        "fechado": "Escopo FECHADO: inclui o descrito e ajustes razoáveis; expansões viram aditivo.",
+        "aberto": "Escopo ABERTO: inclui refinamentos durante a execução; ampliações relevantes podem exigir reprecificação."
+    }
+
+    return (
+        "### Escopo do Trabalho\n"
+        f"- Complexidade: **{complexidade.upper()}**\n"
+        f"- Escopo: **{escopo.replace('_', ' ').upper()}**\n\n"
+        "#### Entregáveis e Atividades\n"
+        + "\n".join([f"- {x}" for x in blocos_base[complexidade]])
+        + "\n\n"
+        "#### Premissas e Regras\n"
+        f"- {clausulas_escopo[escopo]}\n"
+        "- Documentos e informações serão fornecidos pelo cliente em tempo hábil.\n"
+        "- Itens fora do objeto serão tratados como **mudança de escopo**.\n\n"
+        "#### Descrição detalhada da demanda (fornecida)\n"
+        f"- {descricao.strip()}\n"
+    )
+
+
+# -----------------------------------
+# 5) MOTOR
+# -----------------------------------
+def precificar(inp: PricingInput) -> PricingOutput:
+    praca = inp.praca.upper().strip()
+    if praca not in ROLE_RATES:
+        raise ValueError("praca inválida. Use 'RS' ou 'SP'.")
+
+    perfil = inp.perfil_empresa.upper().strip()
+    if perfil not in PROFILE_HOURS_MULT:
+        raise ValueError("perfil_empresa inválido. Use A até H.")
+
+    complexidade = inp.complexidade.lower().strip()
+    if complexidade not in BASE_HOURS:
+        raise ValueError("complexidade inválida. Use 'baixa', 'media', 'alta' ou 'altissima'.")
+
+    escopo = inp.escopo.lower().strip()
+    if escopo not in SCOPE_MULT:
+        raise ValueError("escopo inválido. Use 'super_fechado', 'fechado' ou 'aberto'.")
+
+    days_available, _ = _parse_prazo(inp.prazo)
+    baseline_days = BASE_DAYS[complexidade]
+
+    # multiplicadores
+    mult_profile_hours = PROFILE_HOURS_MULT[perfil]
+    mult_profile_price = PROFILE_PRICE_MULT[perfil]
+    mult_scope = SCOPE_MULT[escopo]
+    mult_urgency = _urgency_multiplier(days_available, baseline_days)
+
+    # horas totais estimadas (suas bases)
+    total_hours = BASE_HOURS[complexidade] * mult_profile_hours * mult_scope
+    total_hours *= (1.0 + PROJECT_MGMT_PCT_ON_HOURS)   # gestão/QA
+    total_hours *= mult_urgency                         # urgência
+    total_hours = _round_hours(total_hours)
+
+    # mix + ajuste de senioridade por urgência
+    mix = _shift_seniority_for_urgency(TEAM_MIX[complexidade], mult_urgency)
+
+    # horas por cargo
+    horas_por_categoria: Dict[str, float] = {}
+    for role, w in mix.items():
+        h = _round_hours(total_hours * w)
+        if h > 0:
+            horas_por_categoria[role] = h
+
+    # corrige arredondamento para bater total_hours
+    soma = sum(horas_por_categoria.values())
+    if soma != total_hours and horas_por_categoria:
+        role_max = max(horas_por_categoria.keys(), key=lambda r: horas_por_categoria[r])
+        horas_por_categoria[role_max] = _round_hours(horas_por_categoria[role_max] + (total_hours - soma))
+
+    # custo (hora útil) + contingência
+    custo = 0.0
+    for role, h in horas_por_categoria.items():
+        custo += h * ROLE_RATES[praca][role]["custo_hora"]
+    custo *= (1.0 + RISK_CONTINGENCY_PCT)
+
+    # preço de venda (preço hora) com perfil e urgência
+    preco = 0.0
+    for role, h in horas_por_categoria.items():
+        preco += h * ROLE_RATES[praca][role]["preco_hora"]
+    preco *= mult_profile_price
+    preco *= mult_urgency
+
+    # piso mínimo por complexidade (se quiser)
+    preco = max(preco, MIN_FEE_BY_COMPLEXITY.get(complexidade, 0.0))
+
+    # prazo estimado (dias) — padrão
+    prazo_estimado = int(math.ceil(baseline_days * mult_scope * mult_profile_hours))
+    prazo_estimado = max(1, prazo_estimado)
+
+    escopo_texto = _scope_template(complexidade, escopo, inp.descricao_detalhada)
+
+    return PricingOutput(
+        custo_entrega=_round_money(custo),
+        preco_venda=_round_money(preco),
+        horas_por_categoria={ROLE_LABELS[k]: v for k, v in horas_por_categoria.items()},
+        escopo_para_proposta=escopo_texto,
+        prazo_estimado_dias=prazo_estimado,
+        multiplicadores={
+            "perfil_horas": mult_profile_hours,
+            "perfil_preco": mult_profile_price,
+            "escopo": mult_scope,
+            "urgencia": mult_urgency,
+            "pm_pct_horas": 1.0 + PROJECT_MGMT_PCT_ON_HOURS,
+            "contingencia_custo": 1.0 + RISK_CONTINGENCY_PCT,
+        }
+    )
+
+
+# -----------------------------------
+# 6) EXEMPLO DE USO
+# -----------------------------------
+if __name__ == "__main__":
+    exemplo = PricingInput(
+        praca="RS",  # RS ou SP
+        perfil_empresa="A",
+        complexidade="altissima",
+        escopo="aberto",
+        prazo=25,  # dias corridos (ou date(2026, 2, 15))
+        descricao_detalhada="Projeto estruturante com múltiplas áreas, validações executivas e construção de plano implementável."
+    )
+
+    out = precificar(exemplo)
+
+    print("\n=== RESULTADO ===")
+    print("Praça:", exemplo.praca)
+    print("Custo de entrega (R$):", out.custo_entrega)
+    print("Preço de venda (R$):", out.preco_venda)
+    print("Prazo estimado (dias):", out.prazo_estimado_dias)
+
+    print("\nHoras por categoria:")
+    for k, v in out.horas_por_categoria.items():
+        print(f"- {k}: {v}h")
+
+    print("\nMultiplicadores:", out.multiplicadores)
+    print("\nEscopo (colar na proposta):\n")
+    print(out.escopo_para_proposta)X

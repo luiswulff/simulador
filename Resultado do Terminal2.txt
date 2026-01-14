@@ -1,0 +1,48 @@
+Last login: Tue Jan 13 21:39:14 on ttys000
+luiswulffjunior@MacBook-Pro-de-Luis-2 ~ % nano app.py
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  UW PICO 5.09                      File: app.py                      Modified  
+
+    }
+
+    out = precificar(**inp)
+    
+    st.subheader("Resultado")
+    c1, c2, c3 = st.columns(3)   
+    c1.metric("Custo de Entrega (R$)", f"{out.custo_entrega:,.2f}".replace(",",$
+    c2.metric("Preço de Venda (R$)", f"{out.preco_venda:,.2f}".replace(",", "X"$
+    c3.metric("Prazo estimado", f"{out.prazo_estimado_dias} dias")
+        
+    st.subheader("Horas por categoria")
+    st.json(out.horas_por_categoria)
+    
+    st.subheader("Escopo para colar na proposta")
+    st.text_area("Texto", out.escopo_para_proposta, height=320)
+    
+    
+    
+    
+
+^G Get Help  ^O WriteOut  ^R Read File ^Y Prev Pg   ^K Cut Text  ^C Cur Pos   
+^X Exit      ^J Justify   ^W Where is  ^V Next Pg   ^U UnCut Text^T To Spell  
