@@ -1,2 +1,10 @@
 streamlit
 python-docx
+
+# Agente de lembretes WhatsApp
+google-auth>=2.0
+google-api-python-client>=2.0
+anthropic>=0.40
+apscheduler>=3.10
+python-dotenv>=1.0
+requests>=2.31
