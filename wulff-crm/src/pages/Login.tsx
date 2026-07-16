@@ -35,44 +35,17 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-ink-950">
-      {/* Painel de marca (desktop) */}
-      <div className="relative hidden flex-1 flex-col justify-between overflow-hidden p-12 lg:flex">
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-accent-800/30 blur-3xl" />
-        <div className="absolute -bottom-40 right-0 h-96 w-96 rounded-full bg-accent-600/20 blur-3xl" />
-        <div className="relative flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-700 font-serif text-2xl font-bold text-accent-100">
-            W
-          </div>
-          <div>
-            <p className="text-xl font-extrabold text-white">Wulff</p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-ink-400">Relationship CRM</p>
-          </div>
-        </div>
-        <div className="relative max-w-md">
-          <p className="font-serif text-4xl leading-tight text-white">
-            Relacionamentos construídos ao longo do tempo.
-          </p>
-          <ul className="mt-8 space-y-3 text-sm text-ink-300">
-            <li>— Toda a sua rede em um único lugar, com histórico e contexto</li>
-            <li>— Relationship Score e lembretes de cadência para não esfriar contatos</li>
-            <li>— Importação inteligente de qualquer base, com deduplicação</li>
-            <li>— Seus dados, seu backup: portabilidade total em um clique</li>
-          </ul>
-        </div>
-        <p className="relative text-xs text-ink-500">Inteligência pessoal de relacionamentos</p>
-      </div>
-
-      {/* Formulário */}
-      <div className="flex flex-1 items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center lg:hidden">
-          <p className="text-3xl font-extrabold tracking-tight text-white">Wulff</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.25em] text-ink-400">Relationship CRM</p>
-          <p className="mt-3 text-sm italic text-ink-400">
-            Relacionamentos construídos ao longo do tempo
-          </p>
+        {/* Marca */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-600 font-serif text-3xl font-bold text-white shadow-sm">
+            W
+          </span>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-ink-900">Wulff Relationship CRM</h1>
+          <p className="mt-1 text-sm text-ink-500">Relacionamentos construídos ao longo do tempo</p>
         </div>
+
         <form onSubmit={submit} className="card space-y-4 !p-6">
           {mode === 'signup' && (
             <Field label="Nome completo">
@@ -106,14 +79,14 @@ export function LoginPage() {
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </Field>
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-          {info && <p className="rounded-lg bg-accent-50 px-3 py-2 text-sm text-accent-800">{info}</p>}
+          {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          {info && <p className="rounded-xl bg-accent-50 px-3 py-2 text-sm text-accent-800">{info}</p>}
           <button type="submit" className="btn-primary w-full" disabled={busy}>
             {busy ? 'Aguarde…' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
           <button
             type="button"
-            className="w-full text-center text-sm text-ink-500 hover:text-ink-800"
+            className="w-full text-center text-sm font-medium text-accent-700 hover:underline"
             onClick={() => {
               setMode(mode === 'login' ? 'signup' : 'login');
               setError(null);
@@ -125,7 +98,10 @@ export function LoginPage() {
               : 'Já tenho conta — entrar'}
           </button>
         </form>
-      </div>
+
+        <p className="mt-8 text-center text-xs text-ink-400">
+          Sua rede, seu histórico, seus dados — em um só lugar.
+        </p>
       </div>
     </div>
   );
