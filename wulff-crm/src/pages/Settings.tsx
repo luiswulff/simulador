@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Download, DatabaseBackup, Upload, Pencil } from 'lucide-react';
+import { Plus, Trash2, Download, DatabaseBackup, Upload, Pencil, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace, ROLE_LABEL, type WorkspaceRole } from '../contexts/WorkspaceContext';
 import { Field, ConfirmDialog } from '../components/ui';
 import { exportRows, exportContacts, generateBackup, restoreBackup, type ExportFormat } from '../features/export/exporters';
 import type { Category, Contact, Tag } from '../types/db';
 
 export function SettingsPage() {
+  const { isOwner } = useWorkspace();
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <h1 className="text-xl font-extrabold text-ink-900">Configurações</h1>
+      {isOwner && <TeamSection />}
       <CategoriesSection />
       <TagsSection />
       <ExportSection />
@@ -22,6 +25,7 @@ export function SettingsPage() {
 
 function CategoriesSection() {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<Category | null>(null);
@@ -37,7 +41,7 @@ function CategoriesSection() {
     mutationFn: async () => {
       if (!user || !newName.trim()) return;
       await supabase.from('categories').insert({
-        user_id: user.id,
+        user_id: ownerId,
         name: newName.trim(),
         sort_order: categories.length + 1,
       });
@@ -124,6 +128,7 @@ function CategoriesSection() {
 
 function TagsSection() {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [group, setGroup] = useState('');
@@ -137,7 +142,7 @@ function TagsSection() {
     mutationFn: async () => {
       if (!user || !name.trim()) return;
       await supabase.from('tags').upsert(
-        { user_id: user.id, name: name.trim(), group_name: group.trim() || null },
+        { user_id: ownerId, name: name.trim(), group_name: group.trim() || null },
         { onConflict: 'user_id,name' },
       );
     },
@@ -252,6 +257,7 @@ function ExportSection() {
 
 function BackupSection() {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const [progress, setProgress] = useState<string | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const [confirmFile, setConfirmFile] = useState<File | null>(null);
@@ -270,7 +276,7 @@ function BackupSection() {
     if (!user) return;
     setRestoreMsg('Restaurando…');
     try {
-      const res = await restoreBackup(file, user.id, setRestoreMsg);
+      const res = await restoreBackup(file, ownerId, setRestoreMsg);
       const total = Object.values(res.restored).reduce((a, b) => a + b, 0);
       setRestoreMsg(
         `Restauração concluída: ${total.toLocaleString('pt-BR')} registros.` +
@@ -322,14 +328,149 @@ function BackupSection() {
 
 function AboutSection() {
   const { user } = useAuth();
+  const { active } = useWorkspace();
   return (
     <div className="card text-sm text-ink-600">
       <h2 className="mb-2 text-base font-bold text-ink-900">Conta e versão</h2>
-      <p>Usuário: <strong>{user?.email}</strong> · Perfil: <strong>Administrador</strong></p>
-      <p className="mt-2 text-xs text-ink-400">
-        Wulff Relationship CRM · MVP 1.0 · Perfis Executivo, Assistente e Consulta, Mapa de Relacionamentos,
-        campos personalizados e módulo de Relatórios estão preparados no banco para a V2 (ver README).
+      <p>
+        Usuário: <strong>{user?.email}</strong> · Base ativa: <strong>{active.label}</strong> · Papel:{' '}
+        <strong>{ROLE_LABEL[active.role]}</strong>
       </p>
+      <p className="mt-2 text-xs text-ink-400">
+        Wulff Relationship CRM · v1.1 (multiusuário) · Mapa de Relacionamentos, campos personalizados e
+        módulo de Relatórios preparados no banco para a V2 (ver README).
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Equipe — multiusuário: convide pessoas para acessar a SUA base, com papel.
+// A pessoa cria a própria conta na tela de login; depois você a adiciona aqui.
+// ---------------------------------------------------------------------------
+function TeamSection() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<WorkspaceRole>('assistente');
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['my-members'],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('list_my_members');
+      return (data ?? []) as {
+        id: string; member_id: string; member_name: string | null;
+        member_email: string | null; role: WorkspaceRole; created_at: string;
+      }[];
+    },
+  });
+
+  const add = useMutation({
+    mutationFn: async () => {
+      setMsg(null);
+      if (!user) throw new Error('Sessão expirada');
+      const target = email.trim();
+      if (!target) throw new Error('Informe o e-mail da pessoa.');
+      if (target.toLowerCase() === user.email?.toLowerCase()) throw new Error('Você já é o administrador desta base.');
+      const { data, error } = await supabase.rpc('find_profile_by_email', { p_email: target });
+      if (error) throw new Error(error.message);
+      const found = (data ?? [])[0];
+      if (!found) {
+        throw new Error(
+          'Nenhuma conta encontrada com este e-mail. Peça para a pessoa criar a conta dela primeiro (tela de login → "Criar conta") e tente de novo.',
+        );
+      }
+      const { error: insErr } = await supabase.from('workspace_members').insert({
+        owner_id: user.id,
+        member_id: found.id,
+        role,
+      });
+      if (insErr) {
+        if (/duplicate|unique/i.test(insErr.message)) throw new Error('Esta pessoa já é membro da sua base.');
+        throw new Error(insErr.message);
+      }
+    },
+    onSuccess: () => {
+      setEmail('');
+      setMsg('Membro adicionado. Ao entrar, a pessoa verá a sua base no seletor do topo da tela.');
+      qc.invalidateQueries({ queryKey: ['my-members'] });
+    },
+    onError: (e: Error) => setMsg(e.message),
+  });
+
+  const changeRole = useMutation({
+    mutationFn: async (input: { id: string; role: WorkspaceRole }) => {
+      await supabase.from('workspace_members').update({ role: input.role }).eq('id', input.id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-members'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('workspace_members').delete().eq('id', id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-members'] }),
+  });
+
+  return (
+    <div className="card">
+      <h2 className="mb-1 flex items-center gap-2 text-base font-bold text-ink-900">
+        <Users className="h-4 w-4" /> Equipe — acesso multiusuário
+      </h2>
+      <p className="mb-3 text-sm text-ink-500">
+        Dê acesso à sua base para sócios e assistentes. <strong>Como funciona:</strong> a pessoa cria a
+        própria conta na tela de login do sistema; depois você adiciona o e-mail dela aqui, escolhendo o papel.
+      </p>
+      <div className="mb-2 grid gap-1 rounded-lg bg-ink-50 p-3 text-xs text-ink-500">
+        <span><strong>Executivo</strong> — vê tudo, cria e edita contatos, empresas, notas, interações e lembretes.</span>
+        <span><strong>Assistente</strong> — cadastra, organiza, importa e atualiza; não vê notas privadas.</span>
+        <span><strong>Consulta</strong> — apenas visualização.</span>
+      </div>
+
+      {members.length > 0 && (
+        <ul className="mb-3 divide-y divide-ink-50">
+          {members.map((m) => (
+            <li key={m.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-ink-900">{m.member_name ?? m.member_email}</p>
+                <p className="truncate text-xs text-ink-400">{m.member_email}</p>
+              </div>
+              <select
+                className="input !w-36 !py-1 text-xs"
+                value={m.role}
+                onChange={(e) => changeRole.mutate({ id: m.id, role: e.target.value as WorkspaceRole })}
+              >
+                <option value="executivo">Executivo</option>
+                <option value="assistente">Assistente</option>
+                <option value="consulta">Consulta</option>
+              </select>
+              <button className="btn-ghost !p-1.5 !text-red-500" title="Remover acesso" onClick={() => remove.mutate(m.id)}>
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <input
+          className="input !w-72"
+          type="email"
+          placeholder="e-mail da pessoa (conta já criada)"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <select className="input !w-36" value={role} onChange={(e) => setRole(e.target.value as WorkspaceRole)}>
+          <option value="executivo">Executivo</option>
+          <option value="assistente">Assistente</option>
+          <option value="consulta">Consulta</option>
+        </select>
+        <button className="btn-primary" onClick={() => add.mutate()} disabled={add.isPending}>
+          <Plus className="h-4 w-4" /> Adicionar membro
+        </button>
+      </div>
+      {msg && <p className="mt-2 rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700">{msg}</p>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   Upload, ListFilter, Settings, LogOut, Menu, X, Search,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace, ROLE_LABEL } from '../contexts/WorkspaceContext';
 import { GlobalSearch } from './GlobalSearch';
 
 const NAV = [
@@ -20,6 +21,7 @@ const NAV = [
 
 export function Layout() {
   const { signOut, user } = useAuth();
+  const { workspaces, active, setActiveOwner } = useWorkspace();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -33,9 +35,9 @@ export function Layout() {
           end={end}
           onClick={() => setMenuOpen(false)}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            `relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? 'bg-accent-800 text-white'
+                ? 'bg-accent-800/90 text-white shadow-sm before:absolute before:-left-3 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-accent-400'
                 : 'text-ink-300 hover:bg-ink-800 hover:text-white'
             }`
           }
@@ -51,9 +53,14 @@ export function Layout() {
     <div className="flex min-h-screen">
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col bg-ink-950 lg:flex">
-        <div className="px-6 py-6">
-          <p className="text-lg font-extrabold tracking-tight text-white">Wulff</p>
-          <p className="text-[11px] uppercase tracking-widest text-ink-400">Relationship CRM</p>
+        <div className="flex items-center gap-3 px-5 py-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-700 font-serif text-xl font-bold text-accent-100 shadow-inner">
+            W
+          </div>
+          <div>
+            <p className="text-base font-extrabold leading-tight tracking-tight text-white">Wulff</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-ink-400">Relationship CRM</p>
+          </div>
         </div>
         {nav}
         <div className="border-t border-ink-800 p-3">
@@ -113,6 +120,20 @@ export function Layout() {
               Ctrl K
             </kbd>
           </button>
+          {workspaces.length > 1 ? (
+            <select
+              className="max-w-[180px] rounded-lg border border-ink-200 bg-white px-2 py-2 text-xs font-semibold text-ink-700"
+              value={active.ownerId}
+              onChange={(e) => setActiveOwner(e.target.value)}
+              title={`Base ativa · seu papel: ${ROLE_LABEL[active.role]}`}
+            >
+              {workspaces.map((w) => (
+                <option key={w.ownerId} value={w.ownerId}>
+                  {w.own ? 'Minha base' : `${w.label} (${ROLE_LABEL[w.role]})`}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </header>
         <main className="flex-1 px-4 py-6 lg:px-8">
           <Outlet />

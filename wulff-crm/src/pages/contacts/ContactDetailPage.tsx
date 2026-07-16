@@ -3,16 +3,19 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Mail, Phone, Linkedin, MessageCircle, CalendarPlus, StickyNote, Pencil, Camera,
-  Archive, Trash2, Copy, GitMerge, Pin, ArchiveRestore, ExternalLink, Instagram,
+  Archive, Trash2, Copy, GitMerge, Pin, ArchiveRestore, ExternalLink, Instagram, Sparkles,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { logAudit } from '../../lib/audit';
 import { Avatar } from '../../components/Avatar';
 import { ScoreBadge } from '../../components/ScoreBadge';
 import { Spinner, EmptyState, ConfirmDialog, InfoRow, Modal, Field } from '../../components/ui';
 import { InteractionForm, ReminderForm, NoteForm } from '../../components/QuickForms';
 import { ContactForm } from './ContactForm';
+import { EnrichModal } from './EnrichModal';
+import { linkedinSearchUrl } from '../../features/enrichment/provider';
 import { PhotoEditor } from './PhotoEditor';
 import { closenessLabel } from '../../lib/score';
 import { fmtDate, fmtDateTime, fmtRelative, fmtBirthday, interactionLabel } from '../../lib/format';
@@ -36,9 +39,10 @@ export function ContactDetailPage() {
   const tab = params.get('aba') ?? 'visao';
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { canWrite } = useWorkspace();
 
   const [modal, setModal] = useState<
-    null | 'editar' | 'foto' | 'interacao' | 'lembrete' | 'nota' | 'excluir' | 'mesclar'
+    null | 'editar' | 'foto' | 'interacao' | 'lembrete' | 'nota' | 'excluir' | 'mesclar' | 'enriquecer'
   >(null);
   const [interactionKind, setInteractionKind] = useState('reuniao');
 
@@ -143,6 +147,7 @@ export function ContactDetailPage() {
               ))}
             </div>
           </div>
+          {canWrite && (
           <div className="flex flex-wrap gap-1.5">
             <button className="btn-secondary !px-3" onClick={() => setModal('editar')} title="Editar contato">
               <Pencil className="h-4 w-4" />
@@ -164,6 +169,7 @@ export function ContactDetailPage() {
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
+          )}
         </div>
 
         {/* Ações rápidas */}
@@ -178,9 +184,13 @@ export function ContactDetailPage() {
               <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
             </a>
           )}
-          {contact.linkedin && (
-            <a href={normalizeUrl(contact.linkedin)} target="_blank" rel="noreferrer" className="btn-secondary !py-1.5 text-xs">
+          {contact.linkedin ? (
+            <a href={normalizeUrl(contact.linkedin)} target="_blank" rel="noreferrer" className="btn-secondary !py-1.5 text-xs !text-[#0a66c2]">
               <Linkedin className="h-3.5 w-3.5" /> LinkedIn
+            </a>
+          ) : (
+            <a href={linkedinSearchUrl(contact)} target="_blank" rel="noreferrer" className="btn-secondary !py-1.5 text-xs" title="Este contato não tem LinkedIn cadastrado — pesquisar">
+              <Linkedin className="h-3.5 w-3.5" /> Buscar no LinkedIn
             </a>
           )}
           {contact.instagram && (
@@ -188,6 +198,12 @@ export function ContactDetailPage() {
               <Instagram className="h-3.5 w-3.5" /> Instagram
             </a>
           )}
+          {canWrite && (
+            <button className="btn-secondary !py-1.5 text-xs" onClick={() => setModal('enriquecer')}>
+              <Sparkles className="h-3.5 w-3.5" /> Enriquecer cadastro
+            </button>
+          )}
+          {canWrite && (<>
           <button className="btn-secondary !py-1.5 text-xs" onClick={() => { setInteractionKind('ligacao'); setModal('interacao'); }}>
             <Phone className="h-3.5 w-3.5" /> Registrar ligação
           </button>
@@ -200,6 +216,7 @@ export function ContactDetailPage() {
           <button className="btn-secondary !py-1.5 text-xs" onClick={() => setModal('nota')}>
             <StickyNote className="h-3.5 w-3.5" /> Adicionar nota
           </button>
+          </>)}
         </div>
       </div>
 
@@ -245,6 +262,7 @@ export function ContactDetailPage() {
         />
       )}
       {modal === 'mesclar' && <MergeModal contact={contact} onClose={() => setModal(null)} />}
+      {modal === 'enriquecer' && <EnrichModal contact={contact} onClose={() => setModal(null)} />}
     </div>
   );
 }
@@ -448,7 +466,7 @@ function InteractionEntry({
 }
 
 function RelationshipsTab({ contact }: { contact: Contact }) {
-  const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const { data: relationships = [] } = useQuery({
@@ -542,8 +560,8 @@ function RelationshipsTab({ contact }: { contact: Contact }) {
           </ul>
         )}
       </div>
-      {showAdd && user && (
-        <AddRelationshipModal contact={contact} userId={user.id} onClose={() => {
+      {showAdd && ownerId && (
+        <AddRelationshipModal contact={contact} userId={ownerId} onClose={() => {
           setShowAdd(false);
           qc.invalidateQueries({ queryKey: ['relationships', contact.id] });
         }} />
@@ -743,6 +761,7 @@ function NotesTab({ contactId }: { contactId: string }) {
 
 function DocumentsTab({ contact }: { contact: Contact }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const { data: docs = [] } = useQuery({
@@ -765,7 +784,7 @@ function DocumentsTab({ contact }: { contact: Contact }) {
       return;
     }
     await supabase.from('attachments').insert({
-      user_id: user.id,
+      user_id: ownerId,
       contact_id: contact.id,
       file_name: file.name,
       storage_path: path,
@@ -878,6 +897,7 @@ function AuditTab({ contactId }: { contactId: string }) {
 // Mesclagem manual de dois contatos (Seção 10) — preserva todas as informações.
 function MergeModal({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
@@ -925,14 +945,14 @@ function MergeModal({ contact, onClose }: { contact: Contact; onClose: () => voi
 
       // preserva e-mail/telefone do mesclado como adicionais
       if (src.email && src.email !== contact.email) {
-        await supabase.from('contact_emails').insert({ user_id: user.id, contact_id: contact.id, email: src.email, label: 'mesclado' });
+        await supabase.from('contact_emails').insert({ user_id: ownerId, contact_id: contact.id, email: src.email, label: 'mesclado' });
       }
       if (src.phone && src.phone !== contact.phone) {
-        await supabase.from('contact_phones').insert({ user_id: user.id, contact_id: contact.id, phone: src.phone, label: 'mesclado' });
+        await supabase.from('contact_phones').insert({ user_id: ownerId, contact_id: contact.id, phone: src.phone, label: 'mesclado' });
       }
 
       await supabase.from('merge_history').insert({
-        user_id: user.id,
+        user_id: ownerId,
         kept_contact_id: contact.id,
         removed_contact_snapshot: src,
       });

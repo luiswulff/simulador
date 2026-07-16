@@ -319,13 +319,15 @@ function Kpi({
   tone?: 'amber' | 'red';
 }) {
   const color = tone === 'red' ? 'text-red-700' : tone === 'amber' ? 'text-amber-700' : 'text-ink-900';
+  const chip =
+    tone === 'red' ? 'bg-red-50 text-red-600' : tone === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-accent-50 text-accent-700';
   const inner = (
     <>
-      <div className="flex items-center justify-between">
-        <Icon className="h-4 w-4 text-ink-300" />
+      <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg ${chip}`}>
+        <Icon className="h-4 w-4" />
       </div>
-      <p className={`mt-1 text-2xl font-extrabold ${color}`}>{value.toLocaleString('pt-BR')}</p>
-      <p className="text-xs text-ink-500">{label}</p>
+      <p className={`text-2xl font-extrabold tracking-tight ${color}`}>{value.toLocaleString('pt-BR')}</p>
+      <p className="text-xs font-medium text-ink-500">{label}</p>
     </>
   );
   return to ? (

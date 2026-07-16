@@ -3,15 +3,18 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Plus, LayoutGrid, List, Rows3, Download, Archive, Tags, SlidersHorizontal, BookmarkPlus, X,
+  ArrowUpDown, Linkedin,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { linkedinUrlFor } from '../../features/enrichment/provider';
+import { supabase } from '../../lib/supabase';
 import { logAudit } from '../../lib/audit';
 import { Avatar } from '../../components/Avatar';
 import { ScoreBadge } from '../../components/ScoreBadge';
 import { Spinner, EmptyState, Field, Modal } from '../../components/ui';
 import { ContactForm } from './ContactForm';
-import { relationshipScore, CLOSENESS_LEVELS, closenessLabel, completeness } from '../../lib/score';
+import { CLOSENESS_LEVELS, closenessLabel, completeness } from '../../lib/score';
 import { fmtRelative } from '../../lib/format';
 import { exportContacts } from '../../features/export/exporters';
 import type { Contact, Category, Tag } from '../../types/db';
@@ -34,9 +37,28 @@ export interface ContactFilters {
   hasLinkedin?: '' | 'sim' | 'nao';
   noInteractionDays?: number | '';
   birthdayMonth?: number | '';
+  maxScore?: number | '';
   incomplete?: boolean;
   archived?: boolean;
 }
+
+export type SortKey =
+  | 'nome_az' | 'nome_za'
+  | 'score_desc' | 'score_asc'
+  | 'contato_recente' | 'contato_antigo'
+  | 'novos';
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'nome_az', label: 'Nome A → Z' },
+  { value: 'nome_za', label: 'Nome Z → A' },
+  { value: 'score_desc', label: 'Score: maior primeiro' },
+  { value: 'score_asc', label: 'Score: menor primeiro' },
+  { value: 'contato_recente', label: 'Último contato: mais recente' },
+  { value: 'contato_antigo', label: 'Mais tempo sem contato' },
+  { value: 'novos', label: 'Cadastrados recentemente' },
+];
+
+type ScoredContact = Contact & { score: number };
 
 const PAGE_SIZE = 50;
 
@@ -62,12 +84,13 @@ export function ContactsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showSaveList, setShowSaveList] = useState(false);
   const [showBulkTag, setShowBulkTag] = useState(false);
+  const [sort, setSort] = useState<SortKey>('nome_az');
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { ownerId, canWrite } = useWorkspace();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['contacts', filters, page],
+    queryKey: ['contacts', filters, page, sort],
     queryFn: async () => {
       let ids: string[] | null = null;
       if (filters.categoryId) {
@@ -89,7 +112,7 @@ export function ContactsPage() {
       }
 
       let q = supabase
-        .from('contacts')
+        .from('contacts_scored')
         .select('*', { count: 'exact' })
         .is('deleted_at', null)
         .eq('is_archived', Boolean(filters.archived));
@@ -107,6 +130,8 @@ export function ContactsPage() {
       if (filters.company) q = q.ilike('company_name', `%${filters.company}%`);
       if (filters.status) q = q.eq('relationship_status', filters.status);
       if (filters.closeness) q = q.eq('closeness', filters.closeness);
+      if (filters.minScore) q = q.gte('score', Number(filters.minScore));
+      if (filters.maxScore) q = q.lte('score', Number(filters.maxScore));
       if (filters.owner) q = q.ilike('owner', `%${filters.owner}%`);
       if (filters.origin) q = q.eq('source', filters.origin);
       if (filters.hasEmail === 'sim') q = q.not('email', 'is', null);
@@ -121,13 +146,20 @@ export function ContactsPage() {
         q = q.or(`last_interaction_at.lt.${cutoff},last_interaction_at.is.null`);
       }
 
+      switch (sort) {
+        case 'nome_az': q = q.order('full_name'); break;
+        case 'nome_za': q = q.order('full_name', { ascending: false }); break;
+        case 'score_desc': q = q.order('score', { ascending: false }).order('full_name'); break;
+        case 'score_asc': q = q.order('score', { ascending: true }).order('full_name'); break;
+        case 'contato_recente': q = q.order('last_interaction_at', { ascending: false, nullsFirst: false }).order('full_name'); break;
+        case 'contato_antigo': q = q.order('last_interaction_at', { ascending: true, nullsFirst: true }).order('full_name'); break;
+        case 'novos': q = q.order('created_at', { ascending: false }); break;
+      }
       const { data: rows, count, error } = await q
-        .order('full_name')
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
       if (error) throw new Error(error.message);
 
-      let result = (rows ?? []) as Contact[];
-      if (filters.minScore) result = result.filter((c) => relationshipScore(c).total >= Number(filters.minScore));
+      let result = (rows ?? []) as ScoredContact[];
       if (filters.incomplete) result = result.filter((c) => completeness(c) < 0.5);
       return { rows: result, count: count ?? 0 };
     },
@@ -193,6 +225,22 @@ export function ContactsPage() {
             </button>
           ))}
         </div>
+        <label className="flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-2.5 text-sm text-ink-600">
+          <ArrowUpDown className="h-3.5 w-3.5 text-ink-400" />
+          <select
+            className="bg-transparent py-2 text-sm outline-none"
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value as SortKey);
+              setPage(0);
+            }}
+            title="Ordenar lista"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
         <button className="btn-secondary" onClick={() => setShowFilters((v) => !v)}>
           <SlidersHorizontal className="h-4 w-4" />
           Filtros {activeFilterCount > 0 && <span className="chip bg-accent-800 text-white">{activeFilterCount}</span>}
@@ -204,9 +252,11 @@ export function ContactsPage() {
         >
           <Download className="h-4 w-4" /> Exportar
         </button>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" /> Novo contato
-        </button>
+        {canWrite && (
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" /> Novo contato
+          </button>
+        )}
       </div>
 
       {showFilters && (
@@ -226,12 +276,16 @@ export function ContactsPage() {
       {selected.size > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-accent-200 bg-accent-50 px-4 py-2.5">
           <span className="text-sm font-semibold text-accent-900">{selected.size} selecionado(s)</span>
-          <button className="btn-ghost !py-1 text-sm" onClick={() => setShowBulkTag(true)}>
-            <Tags className="h-4 w-4" /> Aplicar tag
-          </button>
-          <button className="btn-ghost !py-1 text-sm" onClick={() => bulkArchive.mutate()}>
-            <Archive className="h-4 w-4" /> Arquivar
-          </button>
+          {canWrite && (
+            <>
+              <button className="btn-ghost !py-1 text-sm" onClick={() => setShowBulkTag(true)}>
+                <Tags className="h-4 w-4" /> Aplicar tag
+              </button>
+              <button className="btn-ghost !py-1 text-sm" onClick={() => bulkArchive.mutate()}>
+                <Archive className="h-4 w-4" /> Arquivar
+              </button>
+            </>
+          )}
           <button
             className="btn-ghost !py-1 text-sm"
             onClick={async () => {
@@ -313,6 +367,7 @@ export function ContactsPage() {
                 <th className="px-2 py-3">Cidade</th>
                 <th className="px-2 py-3">Grau</th>
                 <th className="px-2 py-3">Último contato</th>
+                <th className="w-10 px-2 py-3"></th>
                 <th className="px-2 py-3 text-right">Score</th>
               </tr>
             </thead>
@@ -352,6 +407,17 @@ export function ContactsPage() {
                   <td className="px-2 py-2.5 text-ink-600">{[c.city, c.state].filter(Boolean).join('/') || '—'}</td>
                   <td className="px-2 py-2.5 text-ink-600">{closenessLabel(c.closeness)}</td>
                   <td className="px-2 py-2.5 text-ink-500">{fmtRelative(c.last_interaction_at)}</td>
+                  <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <a
+                      href={linkedinUrlFor(c)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={c.linkedin ? 'Abrir perfil no LinkedIn' : 'Pesquisar no LinkedIn'}
+                      className={`inline-flex rounded-md p-1.5 ${c.linkedin ? 'text-[#0a66c2] hover:bg-blue-50' : 'text-ink-300 hover:bg-ink-100 hover:text-ink-600'}`}
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                  </td>
                   <td className="px-2 py-2.5 text-right">
                     <ScoreBadge contact={c} />
                   </td>
@@ -384,7 +450,7 @@ export function ContactsPage() {
         <BulkTagModal
           contactIds={Array.from(selected)}
           tags={tags}
-          userId={user?.id ?? ''}
+          userId={ownerId}
           onClose={() => {
             setShowBulkTag(false);
             setSelected(new Set());
@@ -478,8 +544,12 @@ function FilterPanel({
           <option value="perdido">Perdido</option>
         </select>
       </Field>
-      <Field label="Score mínimo">
-        <input type="number" min={0} max={100} className="input" value={filters.minScore ?? ''} onChange={(e) => set('minScore', e.target.value ? +e.target.value : '')} />
+      <Field label="Score entre (0–100)">
+        <div className="flex items-center gap-2">
+          <input type="number" min={0} max={100} placeholder="mín" className="input" value={filters.minScore ?? ''} onChange={(e) => set('minScore', e.target.value ? +e.target.value : '')} />
+          <span className="text-ink-400">–</span>
+          <input type="number" min={0} max={100} placeholder="máx" className="input" value={filters.maxScore ?? ''} onChange={(e) => set('maxScore', e.target.value ? +e.target.value : '')} />
+        </div>
       </Field>
       <Field label="Sem interação há (dias)">
         <input type="number" min={0} className="input" value={filters.noInteractionDays ?? ''} onChange={(e) => set('noInteractionDays', e.target.value ? +e.target.value : '')} />
@@ -546,6 +616,7 @@ function FilterPanel({
 
 function SaveSmartListModal({ filters, onClose }: { filters: ContactFilters; onClose: () => void }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -553,7 +624,7 @@ function SaveSmartListModal({ filters, onClose }: { filters: ContactFilters; onC
     mutationFn: async () => {
       if (!user || !name.trim()) throw new Error('Dê um nome à lista.');
       const { error } = await supabase.from('saved_filters').insert({
-        user_id: user.id,
+        user_id: ownerId,
         name: name.trim(),
         description: description.trim() || null,
         filters,

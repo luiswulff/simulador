@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { Spinner, EmptyState } from '../../components/ui';
 import { CompanyForm } from './CompanyForm';
 import type { Company } from '../../types/db';
@@ -11,6 +12,7 @@ export function CompaniesPage() {
   const [q, setQ] = useState('');
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
+  const { canWrite } = useWorkspace();
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies', q],
@@ -41,9 +43,11 @@ export function CompaniesPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" /> Nova empresa
-        </button>
+        {canWrite && (
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" /> Nova empresa
+          </button>
+        )}
       </div>
 
       {isLoading ? (

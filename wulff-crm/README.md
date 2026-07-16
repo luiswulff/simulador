@@ -175,6 +175,42 @@ docs/
 
 ---
 
+## Multiusuário (v1.1)
+
+A base pode ser compartilhada com sócios e assistentes:
+
+1. A pessoa cria a própria conta na tela de login do sistema.
+2. O administrador vai em **Configurações → Equipe** e adiciona o e-mail dela com um papel:
+   - **Executivo** — vê tudo, cria e edita contatos, empresas, notas, interações e lembretes;
+   - **Assistente** — cadastra, organiza, importa e atualiza; **não vê notas privadas**;
+   - **Consulta** — apenas visualização.
+3. Ao entrar, a pessoa escolhe a base no **seletor do topo da tela** ("Minha base" ⇄ base compartilhada).
+
+As permissões são aplicadas no banco (Row Level Security) — não apenas na interface.
+Bancos criados com o schema v1.0 devem rodar **`supabase/upgrade-v1.1.sql`** uma vez.
+
+> Recomendação: membros devem usar contas dedicadas (sem dados próprios), pois as listas
+> exibem tudo que a conta pode ler (base própria + compartilhadas).
+
+## Enriquecimento via LinkedIn
+
+- Cada contato tem os botões **"Buscar no LinkedIn"** (pesquisa de pessoas já preenchida com
+  nome + empresa) e **"Enriquecer cadastro"** (modal para colar URL do perfil, cargo, empresa,
+  cidade e segmento de uma vez). A lista de contatos tem um atalho de LinkedIn por linha.
+- **Por que não é 100% automático:** o LinkedIn não oferece API pública de busca/leitura de
+  perfis de terceiros, e raspagem viola os Termos de Uso. Para automação real, conecte um
+  provedor pago (ex.: Proxycurl) implementando `src/features/enrichment/provider.ts` via
+  Netlify Function — o botão "Enriquecer automaticamente" já existe e passa a funcionar.
+
+## Ordenação e filtro por score (v1.1)
+
+O score é calculado também **no banco** (função `contact_score` + view `contacts_scored`,
+mesmos pesos da interface), permitindo na lista de contatos:
+
+- ordenar por **Nome A→Z / Z→A**, **Score maior/menor primeiro**, **último contato** e
+  **cadastro mais recente**;
+- filtrar por **faixa de score (mín–máx)** com precisão, aplicada no servidor.
+
 ## O que ficou preparado para a V2 (e como ativar)
 
 A interface do MVP não exibe nada disso (sem botões mortos); a base está pronta:
@@ -184,7 +220,6 @@ A interface do MVP não exibe nada disso (sem botões mortos); a base está pron
 | **Mapa de Relacionamentos (grafo)** | Tabela `relationships` populada (inclui "quem apresentou"); aba Relacionamentos no contato | Construir página de grafo (ex.: d3/vis.js) lendo `relationships` |
 | **Campos personalizados** | Tabelas `custom_fields` e `custom_field_values` | Criar UI de gestão em Configurações e render dinâmico no formulário |
 | **Módulo de Relatórios** | Indicadores no dashboard; dados normalizados | Criar página `/relatorios` com agregações (a rota está reservada no menu como oculta) |
-| **Perfis Executivo/Assistente/Consulta** | Enum `user_role` + coluna `profiles.role`; permissões documentadas na Seção 21 da spec | Criar telas de gestão de usuários e policies por role |
 | **Busca de foto na internet** | Tela pronta no editor de fotos; interface `PhotoSearchProvider` desacoplada | Implementar o provedor em `src/features/photos/searchProvider.ts` chamando uma API de busca (Google Programmable Search/Bing) **via Netlify Function** — nunca exponha a chave no front-end |
 | **Integrações (Google, Outlook, WhatsApp, RD, HubSpot…)** | Arquitetura de importação por arquivo compatível com todos os exports | Adicionar OAuth/APIs conforme credenciais (Seção 28 da spec) |
 | **Camada de IA** | Dados estruturados (interações, notas, score) prontos para consumo | Criar Netlify Functions chamando o modelo desejado (Seção 29) |

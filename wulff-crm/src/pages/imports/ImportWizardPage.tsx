@@ -4,6 +4,7 @@ import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Download } f
 import Papa from 'papaparse';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { logAudit } from '../../lib/audit';
 import { Field, Spinner } from '../../components/ui';
 import { parseFile, type ParsedFile } from '../../features/import/parsers';
@@ -17,6 +18,7 @@ const STEPS = ['Upload', 'Leitura', 'Mapeamento', 'Normalização', 'Duplicidade
 
 export function ImportWizardPage() {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
@@ -120,7 +122,7 @@ export function ImportWizardPage() {
       const { data: job, error: jobErr } = await supabase
         .from('import_jobs')
         .insert({
-          user_id: user.id,
+          user_id: ownerId,
           file_name: file.name,
           file_type: parsed.fileType,
           status: 'pendente',
@@ -132,7 +134,7 @@ export function ImportWizardPage() {
       if (jobErr) throw new Error(jobErr.message);
       setJobId(job.id);
 
-      const res = await commitImport(prepared, user.id, job.id, setProgress);
+      const res = await commitImport(prepared, ownerId, job.id, setProgress);
       setResult(res);
 
       await supabase

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, addMonths, format } from 'date-fns';
 import { Plus, Check, Cake, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Spinner, EmptyState } from '../components/ui';
 import { ReminderForm } from '../components/QuickForms';
 import { fmtDate } from '../lib/format';
@@ -17,6 +18,7 @@ const RECURRENCE_MONTHS: Record<string, number> = {
 
 export function AgendaPage() {
   const qc = useQueryClient();
+  const { canWrite } = useWorkspace();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Reminder | null>(null);
 
@@ -92,9 +94,11 @@ export function AgendaPage() {
     <div>
       <div className="mb-5 flex items-center gap-2">
         <h1 className="mr-auto text-xl font-extrabold text-ink-900">Agenda de relacionamento</h1>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" /> Novo lembrete
-        </button>
+        {canWrite && (
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" /> Novo lembrete
+          </button>
+        )}
       </div>
 
       {reminders.length === 0 && bdayUpcoming.length === 0 && (

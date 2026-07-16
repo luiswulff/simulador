@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Pencil, Trash2, Plus, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { logAudit } from '../../lib/audit';
 import { Avatar } from '../../components/Avatar';
 import { Spinner, ConfirmDialog, InfoRow, Modal, Field } from '../../components/ui';
@@ -246,6 +247,7 @@ export function CompanyDetailPage() {
 // Vincula pessoa ↔ empresa com cargo e período (histórico de cargos — Seção 14)
 function LinkContactModal({ companyId, onClose }: { companyId: string; onClose: () => void }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const [q, setQ] = useState('');
   const [contactId, setContactId] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -272,7 +274,7 @@ function LinkContactModal({ companyId, onClose }: { companyId: string; onClose: 
     mutationFn: async () => {
       if (!user || !contactId) throw new Error('Selecione o contato.');
       const { error } = await supabase.from('contact_companies').insert({
-        user_id: user.id,
+        user_id: ownerId,
         contact_id: contactId,
         company_id: companyId,
         job_title: jobTitle || null,

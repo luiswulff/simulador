@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Spinner, EmptyState, Field } from '../components/ui';
 import { InteractionForm } from '../components/QuickForms';
 import { fmtDateTime, interactionLabel, INTERACTION_KINDS } from '../lib/format';
@@ -11,6 +12,7 @@ import type { Interaction } from '../types/db';
 type InteractionRow = Interaction & { contacts: { id: string; full_name: string } | null };
 
 export function InteractionsPage() {
+  const { canWrite } = useWorkspace();
   const [showForm, setShowForm] = useState(false);
   const [kind, setKind] = useState('');
   const [page, setPage] = useState(0);
@@ -45,9 +47,11 @@ export function InteractionsPage() {
             ))}
           </select>
         </Field>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" /> Registrar interação
-        </button>
+        {canWrite && (
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" /> Registrar interação
+          </button>
+        )}
       </div>
 
       {isLoading ? (

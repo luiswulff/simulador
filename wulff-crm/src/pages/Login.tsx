@@ -35,9 +35,38 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink-950 p-4">
+    <div className="flex min-h-screen bg-ink-950">
+      {/* Painel de marca (desktop) */}
+      <div className="relative hidden flex-1 flex-col justify-between overflow-hidden p-12 lg:flex">
+        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-accent-800/30 blur-3xl" />
+        <div className="absolute -bottom-40 right-0 h-96 w-96 rounded-full bg-accent-600/20 blur-3xl" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-700 font-serif text-2xl font-bold text-accent-100">
+            W
+          </div>
+          <div>
+            <p className="text-xl font-extrabold text-white">Wulff</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-ink-400">Relationship CRM</p>
+          </div>
+        </div>
+        <div className="relative max-w-md">
+          <p className="font-serif text-4xl leading-tight text-white">
+            Relacionamentos construídos ao longo do tempo.
+          </p>
+          <ul className="mt-8 space-y-3 text-sm text-ink-300">
+            <li>— Toda a sua rede em um único lugar, com histórico e contexto</li>
+            <li>— Relationship Score e lembretes de cadência para não esfriar contatos</li>
+            <li>— Importação inteligente de qualquer base, com deduplicação</li>
+            <li>— Seus dados, seu backup: portabilidade total em um clique</li>
+          </ul>
+        </div>
+        <p className="relative text-xs text-ink-500">Inteligência pessoal de relacionamentos</p>
+      </div>
+
+      {/* Formulário */}
+      <div className="flex flex-1 items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center lg:hidden">
           <p className="text-3xl font-extrabold tracking-tight text-white">Wulff</p>
           <p className="mt-1 text-xs uppercase tracking-[0.25em] text-ink-400">Relationship CRM</p>
           <p className="mt-3 text-sm italic text-ink-400">
@@ -96,6 +125,7 @@ export function LoginPage() {
               : 'Já tenho conta — entrar'}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

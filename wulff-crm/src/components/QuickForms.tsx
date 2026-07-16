@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { logAudit } from '../lib/audit';
 import { Modal, Field } from './ui';
 import { INTERACTION_KINDS } from '../lib/format';
@@ -55,6 +56,7 @@ export function InteractionForm({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     contact_id: interaction?.contact_id ?? contactId ?? null,
@@ -75,7 +77,7 @@ export function InteractionForm({
         ...form,
         summary: form.summary.trim(),
         occurred_at: new Date(form.occurred_at).toISOString(),
-        user_id: user.id,
+        user_id: ownerId,
       };
       if (interaction) {
         const { error } = await supabase.from('interactions').update(payload).eq('id', interaction.id);
@@ -152,6 +154,7 @@ export function ReminderForm({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     contact_id: reminder?.contact_id ?? contactId ?? null,
@@ -169,7 +172,7 @@ export function ReminderForm({
     mutationFn: async () => {
       if (!user) throw new Error('Sessão expirada');
       if (!form.title.trim()) throw new Error('Dê um título ao lembrete.');
-      const payload = { ...form, title: form.title.trim(), user_id: user.id };
+      const payload = { ...form, title: form.title.trim(), user_id: ownerId };
       if (reminder) {
         const { error } = await supabase.from('reminders').update(payload).eq('id', reminder.id);
         if (error) throw new Error(error.message);
@@ -258,6 +261,7 @@ export function NoteForm({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [form, setForm] = useState({
     title: note?.title ?? '',
@@ -276,7 +280,7 @@ export function NoteForm({
         title: form.title.trim() || null,
         contact_id: note?.contact_id ?? contactId ?? null,
         company_id: note?.company_id ?? companyId ?? null,
-        user_id: user.id,
+        user_id: ownerId,
       };
       if (note) {
         const { error } = await supabase.from('notes').update(payload).eq('id', note.id);

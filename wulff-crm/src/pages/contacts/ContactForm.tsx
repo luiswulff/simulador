@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { logAudit } from '../../lib/audit';
 import { Modal, Field } from '../../components/ui';
 import { CLOSENESS_LEVELS } from '../../lib/score';
@@ -21,6 +22,7 @@ export function ContactForm({
   onSaved?: (id: string) => void;
 }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Contact>>(contact ?? EMPTY);
   const [birthdayText, setBirthdayText] = useState(
@@ -77,7 +79,7 @@ export function ContactForm({
         birth_date: bday.birth_date,
         birth_day: bday.birth_day,
         birth_month: bday.birth_month,
-        user_id: user.id,
+        user_id: ownerId,
       };
       // remove campos calculados/relacionais
       for (const k of ['id', 'created_at', 'updated_at', 'interactions_count', 'last_interaction_at']) {
@@ -102,12 +104,12 @@ export function ContactForm({
       await supabase.from('contact_categories').delete().eq('contact_id', id);
       if (selectedCategories.length)
         await supabase.from('contact_categories').insert(
-          selectedCategories.map((cid) => ({ contact_id: id, category_id: cid, user_id: user.id })),
+          selectedCategories.map((cid) => ({ contact_id: id, category_id: cid, user_id: ownerId })),
         );
       await supabase.from('contact_tags').delete().eq('contact_id', id);
       if (selectedTags.length)
         await supabase.from('contact_tags').insert(
-          selectedTags.map((tid) => ({ contact_id: id, tag_id: tid, user_id: user.id })),
+          selectedTags.map((tid) => ({ contact_id: id, tag_id: tid, user_id: ownerId })),
         );
       return id;
     },
@@ -129,7 +131,7 @@ export function ContactForm({
     } else {
       const { data } = await supabase
         .from('tags')
-        .insert({ user_id: user.id, name })
+        .insert({ user_id: ownerId, name })
         .select()
         .single();
       if (data) {

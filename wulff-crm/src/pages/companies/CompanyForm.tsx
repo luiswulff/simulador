@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { logAudit } from '../../lib/audit';
 import { Modal, Field } from '../../components/ui';
 import { cleanSpaces } from '../../lib/normalize';
@@ -17,6 +18,7 @@ export function CompanyForm({
   onSaved?: (id: string) => void;
 }) {
   const { user } = useAuth();
+  const { ownerId } = useWorkspace();
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Company>>(company ?? { status: 'ativa' });
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function CompanyForm({
       if (!user) throw new Error('Sessão expirada');
       const name = cleanSpaces(form.trade_name ?? '');
       if (!name) throw new Error('O nome fantasia é obrigatório.');
-      const payload: Record<string, unknown> = { ...form, trade_name: name, user_id: user.id };
+      const payload: Record<string, unknown> = { ...form, trade_name: name, user_id: ownerId };
       for (const k of ['id', 'created_at', 'updated_at']) delete payload[k];
       if (company) {
         const { error } = await supabase.from('companies').update(payload).eq('id', company.id);
