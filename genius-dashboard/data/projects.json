@@ -1,0 +1,678 @@
+{
+  "meta": {
+    "source": "GENIUS.md — Módulo Genius / Argos Core",
+    "curatedFor": "ARGOS GENIUS — Executive Project Dashboard",
+    "updatedAt": "2026-08-29",
+    "syncedFrom": "/home/user/simulador/genius-dashboard/data/GENIUS.md",
+    "syncedAt": "2026-08-29T15:46:13.100Z"
+  },
+  "projects": [
+    {
+      "id": "p01",
+      "number": "01",
+      "title": "Partnership 360° (Assessment de Novos Sócios & Produto Comercial)",
+      "partner": "Fabio Steren",
+      "origin": "EO Ícones 2026",
+      "vertical": "SW Advogados",
+      "verticals": [
+        "SW Advogados",
+        "RH Corporativo",
+        "Comitê de Vesting TaxCo"
+      ],
+      "status": "Estruturação",
+      "highlightMetric": "Ticket R$ 80k–150k+",
+      "summary": "Assessment comportamental de sócios acoplado à blindagem jurídica de partnership e vesting: piloto interno no Step 1 e, na sequência, produto de mercado da SW Advogados.",
+      "thesis": "Unir a Blindagem Jurídica de Partnership/Vesting à Blindagem Comportamental/Cultural de quem ingressa na sociedade.",
+      "pillarsOrScope": [
+        "Fase 1 (Piloto Interno): Aplicar a metodologia de assessment de Fabio Steren nos elegíveis ao Programa de Vesting Step 1 da TaxCo Brasil Consultores Ltda. (matriz de atitude de dono, fit fiduciário e tração).",
+        "Fase 2 (Produto de Mercado SW): Embalar a solução \"Partnership 360°\" para clientes externos da SW Advogados (Acordo de Sócios + Due Diligence Humana de Sócios)."
+      ],
+      "economicModel": "Elevação do ticket médio da SW em projetos societários (de R$ 30k–R$ 80k para R$ 80k–R$ 150k+).",
+      "nextSteps": [
+        {
+          "text": "Agendar call de 30 min com Fabio Steren na semana para desenhar o piloto interno com a lista do Step 1.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Fabio Steren",
+          "info": "Parceiro — metodologia de assessment de sócios (alinhamento EO Ícones, 29/08/2026)"
+        }
+      ],
+      "sourceEvent": "Alinhamento EO Ícones — 29/08/2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p02",
+      "number": "02",
+      "title": "JV de Troca Cruzada de Leads (Doc9 & JusCash ⇄ TaxCo)",
+      "partner": "Gabriel Mancuso — Doc9 e JusCash",
+      "origin": "EO Ícones 2026",
+      "vertical": "Banco Fiscal",
+      "verticals": [
+        "Expansão TaxCo",
+        "Tax Group",
+        "Dr. Fiscal",
+        "Banco Fiscal"
+      ],
+      "status": "Em Proposta",
+      "highlightMetric": "CAC Zero / Recrutamento",
+      "summary": "Simetria perfeita de CAC entre Doc9/JusCash e TaxCo: base de advogados alimenta a expansão da rede, carteira corporativa alimenta o software Whom e a JusCash conecta precatórios ao Banco Fiscal.",
+      "thesis": "Simetria perfeita de CAC — a Doc9 tem a base de advogados que a TaxCo precisa para expansão; a TaxCo tem os CNPJs corporativos que a Doc9 precisa para vender seu software Whom.",
+      "pillarsOrScope": [
+        "Doc9 ➔ Expansão TaxCo: Base de dezenas de milhares de correspondentes/advogados da Doc9 como funil qualificado para abertura de novas unidades/franquias do Tax Group e Dr. Fiscal.",
+        "TaxCo ➔ Whom Doc9: Apresentação qualificada da plataforma corporativa Whom para a carteira de milhares de CFOs e Diretores Jurídicos da TaxCo.",
+        "JusCash ⇄ Banco Fiscal: Encaminhamento de precatórios federais/estaduais e ativos fiscais da carteira JusCash para o Banco Fiscal, e antecipação de honorários judiciais para a JusCash."
+      ],
+      "economicModel": "Troca cruzada de leads com CAC zero nas duas pontas, mais originação de precatórios e antecipação de honorários no Banco Fiscal.",
+      "nextSteps": [
+        {
+          "text": "Elaborar One-Pager da JV e agendar almoço/call de alinhamento com Gabriel Mancuso e os Heads de Expansão e Comercial.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Gabriel Mancuso",
+          "info": "Doc9 e JusCash — alinhamento EO Ícones, 29/08/2026"
+        }
+      ],
+      "sourceEvent": "Alinhamento EO Ícones — 29/08/2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p03",
+      "number": "03",
+      "title": "Guahyba Private Estate & Wine Club (Multipropriedade de Luxo)",
+      "partner": "Marcelo Moreno",
+      "origin": "EO Ícones 2026",
+      "vertical": "Guahyba Vinhos",
+      "verticals": [
+        "Guahyba Vinhos",
+        "SW Advogados (Imobiliário & Societário)"
+      ],
+      "status": "Estruturação",
+      "highlightMetric": "VGV R$ 20M — 20 cotas de R$ 1M",
+      "declaredValueBRL": 20000000,
+      "declaredValueLabel": "VGV à vista declarado (20 cotas de R$ 1M)",
+      "summary": "Empreendimento imobiliário e enoturístico ultra-exclusivo sob a Lei 13.777/2018, monetizando o terroir e a infraestrutura da Guahyba com VGV de R$ 20 milhões à vista.",
+      "thesis": "Empreendimento imobiliário e enoturístico ultra-exclusivo sob a Lei 13.777/2018, monetizando o terroir e a infraestrutura da Guahyba com VGV de R$ 20 milhões à vista.",
+      "pillarsOrScope": [
+        "20 Quotas Exclusivas a R$ 1.000.000,00 cada (fração ideal com matrícula imobiliária individual).",
+        "Estrutura Física: Hospedagem Boutique (Villas de Luxo) + Salão de Festas & Eventos VIP + Adega Subterrânea Privativa (Lockers/Wine Vaults) com acervo exclusivo e serviço de sommelier.",
+        "Embaixador Oficial: Marcelo Moreno como embaixador da marca, catalisador de marketing e atração de investidores AAA."
+      ],
+      "economicModel": "VGV de R$ 20 milhões à vista em 20 quotas de R$ 1 milhão, com receita recorrente de operação enoturística e wine club.",
+      "nextSteps": [
+        {
+          "text": "SW redigir o Memorando Jurídico de Multipropriedade (SPE + Regimento) e diagramar o Pitch Deck fechado para validação com Marcelo Moreno.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Marcelo Moreno",
+          "info": "Embaixador oficial e parceiro do projeto — alinhamento EO Ícones, 29/08/2026"
+        }
+      ],
+      "sourceEvent": "Alinhamento EO Ícones — 29/08/2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p04",
+      "number": "04",
+      "title": "Trade Finance & Crédito de Importação (Vixtra)",
+      "partner": "VIXTRA (Cecília Moreira / Julia Porto)",
+      "origin": "Expert XP 2026",
+      "vertical": "Werte Corporate",
+      "verticals": [
+        "Werte Corporate",
+        "Middle Market"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Comissão de 1,5%",
+      "summary": "Linha de financiamento de importações em Reais, com risco cambial zero e 0% de IOF, sem travar limites de duplicatas em bancos convencionais.",
+      "thesis": "Linha de financiamento de importações em Reais (risco cambial zero, 0% IOF) para empresas importadoras, sem travar limites de duplicatas em bancos convencionais.",
+      "pillarsOrScope": [
+        "Público-Alvo: Importadores com volume anual entre US$ 1,5 milhão e US$ 5,0 milhões."
+      ],
+      "economicModel": "1,5% de comissão sobre a base de crédito tomada pelo cliente.",
+      "nextSteps": [
+        {
+          "text": "Cruzar a base de clientes do Tax Group no comércio exterior para oferta direta de Trade Finance.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Cecília Moreira",
+          "info": "Vixtra — Trade Finance"
+        },
+        {
+          "name": "Julia Porto",
+          "info": "Vixtra — Trade Finance"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p05",
+      "number": "05",
+      "title": "Securitização de Dívida Imobiliária e Agro — CRI & CRA (Província)",
+      "partner": "Província Securitizadora (Luís Felipe Carchedi / Ana Carolina Lopes)",
+      "origin": "Expert XP 2026",
+      "vertical": "Werte Corporate",
+      "verticals": [
+        "Werte Corporate (Originação)",
+        "Werte Private (Distribuição)"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Operações de R$ 5M a R$ 15M+",
+      "declaredValueBRL": 15000000,
+      "declaredValueLabel": "Ticket máximo declarado por operação (R$ 5M a R$ 15M+)",
+      "summary": "Estruturação e emissão de CRIs e CRAs para captação de médio e longo prazo de empresas dos setores imobiliário e agronegócio, com distribuição na carteira Private.",
+      "thesis": "Estruturação e emissão de títulos de dívida (CRIs e CRAs) para captação de recursos de médio/longo prazo para empresas dos setores imobiliário e agronegócio.",
+      "pillarsOrScope": [
+        "Parâmetros: Ticket por operação de R$ 5M a R$ 15M+. Títulos isentos de IR distribuíveis na carteira Private."
+      ],
+      "economicModel": "Revenue share sobre a taxa de estruturação + spread de distribuição.",
+      "nextSteps": [
+        {
+          "text": "Mapear incorporadoras e cooperativas/agronegócios no pipeline da TaxCo demandando captação para obras ou capex.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Luís Felipe Carchedi",
+          "info": "Província Securitizadora"
+        },
+        {
+          "name": "Ana Carolina Lopes",
+          "info": "Província Securitizadora"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p06",
+      "number": "06",
+      "title": "FIDCs Exclusivos Proprietários / EPD (Apex Partners & Contea Capital)",
+      "partner": "Apex Partners / Contea Capital",
+      "origin": "Expert XP 2026",
+      "vertical": "Werte Corporate",
+      "verticals": [
+        "Werte Corporate",
+        "Planejamento Tributário Avançado"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Rebate de 30% a 50% da taxa de gestão",
+      "summary": "Estrutura Patrimonial Dedicada (EPD) via FIDC fechado exclusivo para empresas de Lucro Real, reduzindo a carga efetiva de 34% para ~15% e gerando rebate recorrente para a Werte.",
+      "thesis": "Estrutura Patrimonial Dedicada (EPD) via FIDC Fechado Exclusivo para empresas no Lucro Real (Faturamento > R$ 100M e Lucro > R$ 10M/ano).",
+      "pillarsOrScope": [
+        "Vantagem Tributária do Cliente: Redução da carga tributária efetiva de 34% para ~15% via deságio na compra de recebíveis próprios, com 0% PIS/COFINS e 0% IOF (substituindo mútuos corporativos)."
+      ],
+      "economicModel": "30% a 50% da taxa de gestão anual (0,60% a.a.) pago diretamente à Werte/TaxCo como Consultoria Tributária Contínua do FIDC.",
+      "nextSteps": [
+        {
+          "text": "Selecionar os 10 maiores clientes de Lucro Real da carteira TaxCo para apresentação da tese EPD.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Apex Partners",
+          "info": "Estruturação de FIDC exclusivo"
+        },
+        {
+          "name": "Contea Capital",
+          "info": "Gestão do veículo EPD"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p07",
+      "number": "07",
+      "title": "Crédito Privado, FIIs, Fiagros e Fundos Exclusivos (Valora Investimentos)",
+      "partner": "Valora Investimentos (Gestora com R$ 31B sob gestão — Fabio Barbosa)",
+      "origin": "Expert XP 2026",
+      "vertical": "Werte Private",
+      "verticals": [
+        "Werte Private",
+        "Wealth Advisory"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Gestora com R$ 31B sob gestão",
+      "summary": "Acesso a fundos estruturados de crédito de prateleira e co-estruturação de veículos dedicados para as famílias empresárias da Werte.",
+      "thesis": "Acesso a fundos estruturados de crédito de prateleira e co-estruturação de veículos dedicados (fundos exclusivos e carteiras administradas) para as famílias empresárias da Werte.",
+      "pillarsOrScope": [
+        "Prateleira de crédito privado, FIIs e Fiagros da Valora (R$ 31 bilhões sob gestão).",
+        "Co-estruturação de fundos exclusivos e carteiras administradas para famílias empresárias.",
+        "Distribuição via mesa e comitê de alocação da Werte."
+      ],
+      "economicModel": "Distribuição e co-estruturação de veículos dedicados junto à gestora, com receita sobre a alocação da base Private.",
+      "nextSteps": [
+        {
+          "text": "Estruturar o comitê de alocação da Werte para validação das teses de fundos fechados.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Fabio Barbosa",
+          "info": "Valora Investimentos — gestora com R$ 31B de AUM"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p08",
+      "number": "08",
+      "title": "Risco Sacado, Supply Chain Finance & BaaS White Label (BMP / Money Plus)",
+      "partner": "Banco BMP / Money Plus",
+      "origin": "Expert XP 2026",
+      "vertical": "TaxPay",
+      "verticals": [
+        "Werte Corporate",
+        "TaxPay",
+        "Banco Fiscal"
+      ],
+      "status": "Homologação",
+      "highlightMetric": "Spread ~2,5% a.m.",
+      "summary": "Plataforma para grandes e médias empresas anteciparem recebíveis de seus fornecedores (risco sacado), com spread atrativo ou em formato BaaS white label.",
+      "thesis": "Plataforma tecnológica para grandes e médias empresas anteciparem recebíveis de seus fornecedores (Risco Sacado) com spread atrativo (~2,5% a.m.) ou sob formato BaaS White Label.",
+      "pillarsOrScope": [
+        "Risco sacado / supply chain finance para a cadeia de fornecedores do cliente âncora.",
+        "Formato BaaS White Label sob a marca TaxPay / Banco Fiscal.",
+        "Spread operacional em torno de 2,5% ao mês."
+      ],
+      "economicModel": "Spread de aproximadamente 2,5% a.m. nas operações de antecipação, além da receita de BaaS white label.",
+      "nextSteps": [
+        {
+          "text": "Concluir a homologação técnica e documental das primeiras operações piloto.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Banco BMP / Money Plus",
+          "info": "Provedor da esteira de risco sacado e BaaS"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p09",
+      "number": "09",
+      "title": "Seguros Corporativos, Garantias Judiciais & D&O (WIZ Co)",
+      "partner": "WIZ Co",
+      "origin": "Expert XP 2026",
+      "vertical": "SW Advogados",
+      "verticals": [
+        "Werte Corporate",
+        "SW Advogados",
+        "Banco Fiscal"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Liberação de depósito judicial",
+      "summary": "Substituição de depósito judicial por seguro garantia — descongelando caixa preso em processos — somada a garantias operacionais e D&O para conselheiros e diretores.",
+      "thesis": "Substituição de depósito judicial por seguro garantia, descongelando caixa imediatamente, e oferta de garantias operacionais e D&O para a base TaxCo e SW.",
+      "pillarsOrScope": [
+        "Substituição de Depósito Judicial por Seguro Garantia: Descongelamento imediato de caixa preso em processos judiciais/trabalhistas/fiscais para clientes da TaxCo e SW.",
+        "Garantias Operacionais & D&O: Seguro D&O para conselheiros/diretores, BID Bonds e Performance Bonds para contratos pesados."
+      ],
+      "economicModel": "Comissionamento de corretagem sobre os prêmios emitidos, com efeito direto de liberação de caixa para a base de clientes.",
+      "nextSteps": [
+        {
+          "text": "Criar a esteira de varredura nos processos judiciais da SW para oferta de seguro garantia e resgate de depósitos recursais.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "WIZ Co",
+          "info": "Provedor de seguros corporativos, garantia judicial e D&O"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p10",
+      "number": "10",
+      "title": "Inteligência Artificial de Carteiras & Rating de Crédito (Economatica Kento & Credit Guide)",
+      "partner": "Economatica (Kento AI) / Credit Guide",
+      "origin": "Expert XP 2026",
+      "vertical": "Werte Private",
+      "verticals": [
+        "Werte Wealth Advisory",
+        "Mesa de Operações"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Diagnósticos instantâneos",
+      "summary": "Ferramentas de IA que geram diagnósticos instantâneos de carteiras e relatórios de rating de crédito privado direto no WhatsApp e em reunião, multiplicando a conversão de clientes HNW.",
+      "thesis": "Utilização de ferramentas de IA para gerar diagnósticos instantâneos de carteiras de investimentos e relatórios de risco/rating de crédito privado (CRI, CRA, Debêntures) no WhatsApp/Reuniões, multiplicando a taxa de conversão de clientes HNW.",
+      "pillarsOrScope": [
+        "Diagnóstico instantâneo de carteira do prospect durante a própria reunião.",
+        "Relatórios de risco e rating de crédito privado (CRI, CRA, debêntures).",
+        "Uso direto pelo time de Wealth em WhatsApp e reuniões presenciais."
+      ],
+      "economicModel": "Ganho de conversão comercial na mesa Private — a ferramenta é insumo de originação, não linha de receita direta.",
+      "nextSteps": [
+        {
+          "text": "Homologar os logins das ferramentas para uso do time de Wealth da Werte.",
+          "done": false
+        }
+      ],
+      "contacts": [
+        {
+          "name": "Economatica (Kento AI)",
+          "info": "Diagnóstico de carteiras por IA"
+        },
+        {
+          "name": "Credit Guide",
+          "info": "Rating e risco de crédito privado"
+        }
+      ],
+      "sourceEvent": "Imersão na Expert XP 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p11",
+      "number": "11",
+      "title": "JV Estratégica Nexxera (Duplicatas, Mercado Secundário & Reforma)",
+      "partner": "Edson Silva — Nexxera",
+      "origin": "Parceria Estratégica",
+      "vertical": "Banco Fiscal",
+      "verticals": [
+        "Banco Fiscal",
+        "Tax Group",
+        "Operações Financeiras"
+      ],
+      "status": "Em Proposta",
+      "highlightMetric": "Estudo Nielsen & Registradoras",
+      "summary": "Integração da infraestrutura tecnológica bancária da Nexxera com a inteligência tributária do ecossistema TaxCo, mirando duplicata obrigatória, mercado secundário e liquidação na Reforma.",
+      "thesis": "Integração de infraestrutura tecnológica bancária da Nexxera com a inteligência tributária do ecossistema TaxCo (Estudo Nielsen, Duplicata Obrigatória, Mercado Secundário em Registradoras e Liquidação Financeira na Reforma).",
+      "pillarsOrScope": [
+        "Estudo Nielsen como base de inteligência da JV.",
+        "Duplicata obrigatória e mercado secundário em registradoras.",
+        "Liquidação financeira no desenho da Reforma Tributária."
+      ],
+      "economicModel": "JV de infraestrutura: receita compartilhada sobre operações de duplicata e liquidação originadas no ecossistema TaxCo. (A definir na proposta.)",
+      "nextSteps": [
+        {
+          "text": "Formalizar a pauta alinhada no jantar de SP em uma proposta de JV para Edson Silva.",
+          "done": false
+        },
+        {
+          "text": "Consolidar o Estudo Nielsen e o desenho de liquidação na Reforma como anexo técnico da proposta.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Edson Silva",
+          "info": "Nexxera — jantar em SP / Café Journal, 19/08/2026"
+        }
+      ],
+      "sourceEvent": "Jantar em SP / Café Journal — 19/08/2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p12",
+      "number": "12",
+      "title": "TaxPay & Saúde Link (BaaS BMP na Saúde)",
+      "partner": "Edrik Schaeppi / Saúde Link / QSJ",
+      "origin": "Parceria Estratégica",
+      "vertical": "TaxPay",
+      "verticals": [
+        "TaxPay",
+        "Banco Fiscal",
+        "Consultoria Tributária"
+      ],
+      "status": "Homologação",
+      "highlightMetric": "Split tributário na saúde",
+      "summary": "Split de pagamento e BaaS tributário para o ecossistema médico e de clínicas, com ECFs de 2024 e 2025 já analisadas e fechamento condicionado à regularização da QSJ.",
+      "thesis": "Split de pagamento e BaaS tributário para o ecossistema médico/clínicas. ECFs de 2024 e 2025 da Saúde Link analisadas; aguardando regularização da QSJ para fechamento.",
+      "pillarsOrScope": [
+        "ECFs de 2024 e 2025 da Saúde Link analisadas.",
+        "Fechamento aguardando a regularização da QSJ.",
+        "Split tributário aplicado ao fluxo de recebíveis de clínicas e médicos."
+      ],
+      "economicModel": "Receita de BaaS e split tributário sobre o fluxo transacionado das clínicas do ecossistema Saúde Link.",
+      "nextSteps": [
+        {
+          "text": "Acompanhar a regularização da QSJ para destravar o fechamento.",
+          "done": false
+        },
+        {
+          "text": "Concluir a homologação fiscal do split com base nas ECFs 2024/2025 analisadas.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Edrik Schaeppi",
+          "info": "Saúde Link / QSJ — onboarding direto, agosto/2026"
+        }
+      ],
+      "sourceEvent": "Agosto 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p13",
+      "number": "13",
+      "title": "WERTE — Family Office 360° (Private + Corporate)",
+      "partner": "Luís Wulff / Diretoria Executiva",
+      "origin": "Rotina Executiva",
+      "vertical": "Werte Private",
+      "verticals": [
+        "Werte (Ex-Valora)",
+        "SW Advogados",
+        "Gestão Patrimonial"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Wealth & Sucessão de dono para dono",
+      "summary": "Plataforma patrimonial de dono para dono, cobrindo holdings inshore e offshore (Lei 14.754), BPO contábil patrimonial, governança sucessória e wealth management.",
+      "thesis": "Plataforma patrimonial \"de dono para dono\" cobrindo Holdings Inshore/Offshore (Lei 14.754), BPO Contábil Patrimonial, Governança Sucessória e Wealth Management.",
+      "pillarsOrScope": [
+        "Holdings inshore e offshore sob a Lei 14.754.",
+        "BPO contábil patrimonial.",
+        "Governança sucessória.",
+        "Wealth management integrado à mesa Werte."
+      ],
+      "economicModel": "Fees recorrentes de estruturação patrimonial, BPO e wealth management sobre a base de famílias empresárias.",
+      "nextSteps": [
+        {
+          "text": "Consolidar o posicionamento e o rebranding Werte (ex-Valora) nas peças institucionais.",
+          "done": false
+        },
+        {
+          "text": "Integrar as ofertas Private e Corporate no mesmo funil de famílias empresárias.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Diretoria Executiva Werte",
+          "info": "Mandato de transição — 24/08/2026"
+        }
+      ],
+      "sourceEvent": "Mandato de Transição — 24/08/2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p14",
+      "number": "14",
+      "title": "Projeto Bússola (Inteligência de Mercado & TAM 238k Empresas)",
+      "partner": "Diretoria TaxCo / Lucas Perius (BI) / TI Jeremias",
+      "origin": "Rotina Executiva",
+      "vertical": "Tax Group",
+      "verticals": [
+        "Tax Group",
+        "Dr. Fiscal",
+        "Expansão e Venda Direta"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "238.345 empresas mapeadas",
+      "summary": "Mapeamento integral das 238.345 empresas de Lucro Real do Brasil (Base Compass) no Data Lake, direcionando as unidades da rede.",
+      "thesis": "Mapeamento integral de todas as 238.345 empresas no Lucro Real do Brasil (Base Compass) no Data Lake para direcionamento das unidades da rede.",
+      "pillarsOrScope": [
+        "Base Compass com 238.345 empresas de Lucro Real carregada no Data Lake.",
+        "Direcionamento territorial das unidades da rede.",
+        "Insumo direto para Expansão e Venda Direta."
+      ],
+      "economicModel": "Redução de CAC e aumento de conversão da rede — inteligência de mercado como ativo interno, não linha de receita direta.",
+      "nextSteps": [
+        {
+          "text": "Distribuir os recortes da Base Compass por unidade da rede.",
+          "done": false
+        },
+        {
+          "text": "Conectar o TAM mapeado ao pipeline de Venda Direta e Expansão.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Lucas Perius",
+          "info": "BI — Projeto Bússola"
+        },
+        {
+          "name": "Jeremias",
+          "info": "TI — Data Lake"
+        }
+      ],
+      "sourceEvent": "Agosto 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p15",
+      "number": "15",
+      "title": "Protocolo FÊNIX (Reativação de Propostas Comerciais no Gmail)",
+      "partner": "Luís Wulff / Operação Comercial Hermes",
+      "origin": "Rotina Executiva",
+      "vertical": "Tax Group",
+      "verticals": [
+        "Caixa Executiva do CEO",
+        "Closers Comerciais TaxCo",
+        "Venda Direta"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Resgate de pipeline no Gmail",
+      "summary": "Monitoramento autônomo de reabertura de propostas adormecidas no Gmail, com geração imediata de follow-ups customizados no mesmo fio.",
+      "thesis": "Monitoramento autônomo de reabertura de propostas adormecidas no Gmail com geração imediata de follow-ups customizados no mesmo fio.",
+      "pillarsOrScope": [
+        "Varredura autônoma da caixa executiva em busca de propostas adormecidas.",
+        "Geração imediata de follow-up customizado no mesmo fio de e-mail.",
+        "Distribuição dos resgates para os closers comerciais."
+      ],
+      "economicModel": "Receita recuperada de pipeline já existente — custo de aquisição zero.",
+      "nextSteps": [
+        {
+          "text": "Manter a rotina de varredura ativa e medir o volume de propostas reativadas.",
+          "done": false
+        },
+        {
+          "text": "Distribuir os resgates entre os closers com prazo de retorno definido.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Operação Comercial Hermes",
+          "info": "Rotina de reativação de propostas — agosto/2026"
+        }
+      ],
+      "sourceEvent": "Agosto 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p16",
+      "number": "16",
+      "title": "Livro \"Dividir para Multiplicar\" & Posicionamento de Autoridade",
+      "partner": "Luís Wulff / Stéfanie Galante / Editora",
+      "origin": "Rotina Executiva",
+      "vertical": "NX Business School",
+      "verticals": [
+        "NX Business School",
+        "TaxCo Institucional"
+      ],
+      "status": "Concluído",
+      "highlightMetric": "800+ líderes conectados",
+      "summary": "Disseminação do modelo de escala descentralizada (partnership e redes) como motor de atração de sócios, líderes e alunos executivos.",
+      "thesis": "Disseminação do modelo de escala descentralizada (partnership e redes) como motor de atração de sócios, líderes e alunos executivos.",
+      "pillarsOrScope": [
+        "Livro lançado e em circulação.",
+        "Posicionamento de autoridade em partnership e escala descentralizada.",
+        "Rede de 800+ líderes conectados a partir do lançamento."
+      ],
+      "economicModel": "Ativo de autoridade e geração de demanda para NX Business School e para o funil de sócios.",
+      "nextSteps": [
+        {
+          "text": "Converter a base de líderes conectados em pipeline da NX Business School.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Stéfanie Galante",
+          "info": "Coautoria e lançamento — julho/agosto 2026"
+        }
+      ],
+      "sourceEvent": "Julho/Agosto 2026",
+      "updatedAt": "2026-08-29"
+    },
+    {
+      "id": "p17",
+      "number": "17",
+      "title": "Wine & Tax (Imersões de Enoturismo e Inteligência Fiscal)",
+      "partner": "Luís Wulff / Guahyba Vinhos / Sympla",
+      "origin": "Rotina Executiva",
+      "vertical": "Guahyba Vinhos",
+      "verticals": [
+        "Guahyba Vinhos",
+        "Tax Group",
+        "Relacionamento Institucional"
+      ],
+      "status": "Ativo",
+      "highlightMetric": "Enoturismo de alto padrão",
+      "summary": "Degustação de vinhos premiados combinada a conteúdo tributário estratégico, para relacionamento e conversão de grandes contas corporativas.",
+      "thesis": "Degustação de vinhos premiados combinada a conteúdo tributário estratégico para relacionamento e conversão de grandes contas corporativas.",
+      "pillarsOrScope": [
+        "Imersões presenciais de enoturismo na Guahyba.",
+        "Conteúdo tributário estratégico como eixo do evento.",
+        "Captação e conversão de grandes contas corporativas."
+      ],
+      "economicModel": "Canal de relacionamento e conversão de contas corporativas, com receita de eventos via Sympla.",
+      "nextSteps": [
+        {
+          "text": "Manter o calendário de imersões e medir a conversão das contas participantes.",
+          "done": false
+        }
+      ],
+      "nextStepsDerived": true,
+      "contacts": [
+        {
+          "name": "Guahyba Vinhos / Sympla",
+          "info": "Eventos presenciais — maio a agosto/2026"
+        }
+      ],
+      "sourceEvent": "Maio a Agosto 2026",
+      "updatedAt": "2026-08-29"
+    }
+  ]
+}

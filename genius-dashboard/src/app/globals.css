@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-ink-950 text-slate-200 antialiased;
+    font-family: var(--font-inter);
+    background-image:
+      radial-gradient(900px 500px at 12% -8%, rgba(212, 175, 55, 0.09), transparent 60%),
+      radial-gradient(900px 520px at 92% -4%, rgba(59, 130, 246, 0.11), transparent 62%);
+    background-attachment: fixed;
+  }
+
+  /* Números tabulares em métricas, tickets e VGV. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #2a3a52;
+    background-clip: content-box;
+  }
+
+  ::selection {
+    background: rgba(212, 175, 55, 0.28);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold/70 ring-offset-2 ring-offset-ink-950;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-ink-700 bg-ink-800/60;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/70 px-3 py-1.5
+           text-xs font-medium text-slate-300 transition-colors hover:border-ink-600 hover:text-slate-100;
+  }
+
+  .chip-active {
+    @apply border-gold/60 bg-gold/10 text-gold-soft hover:border-gold/80 hover:text-gold-soft;
+  }
+}
+
+/* ---- Exportação / Impressão do One-Pager ---- */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    background: #ffffff !important;
+    color: #0b0f17 !important;
+    background-image: none !important;
+  }
+
+  /* Só a folha de impressão do One-Pager vai para o papel / PDF. */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+
+  .print-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Navegadores não imprimem fundos por padrão: o one-pager é forçado para
+     tinta escura sobre papel branco, com bordas em cinza claro. */
+  .print-sheet,
+  .print-sheet * {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .print-sheet .tabular,
+  .print-sheet h1,
+  .print-sheet h2,
+  .print-sheet h3 {
+    color: #0b0f17 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
