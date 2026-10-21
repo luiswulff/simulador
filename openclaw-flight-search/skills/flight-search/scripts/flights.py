@@ -891,11 +891,13 @@ def cmd_quote(a: argparse.Namespace) -> dict:
     if q.get("provider") == "mock":
         trip_label = "Amostra com dados fictícios · " + trip_label
 
-    # sem logo configurado, usa a marca escrita (padrão: tax.co em Hanken Grotesk)
+    # logo: FLIGHTS_BRAND_LOGO (caminho ou "none") ou o logo tax.co que acompanha a skill;
+    # sem arquivo, cai na marca escrita
     wordmark = os.environ.get("FLIGHTS_BRAND_WORDMARK") or "tax.co"
     logo_html = logo_small_html = f'<span class="brand-text">{esc(wordmark)}</span>'
-    logo_path = os.environ.get("FLIGHTS_BRAND_LOGO") or ""
-    if logo_path and os.path.isfile(logo_path):
+    logo_path = os.environ.get("FLIGHTS_BRAND_LOGO") or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "taxco-logo.png")
+    if logo_path.lower() != "none" and os.path.isfile(logo_path):
         import base64
         import mimetypes
         mime = mimetypes.guess_type(logo_path)[0] or "image/png"
