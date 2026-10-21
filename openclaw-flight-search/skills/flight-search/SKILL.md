@@ -65,6 +65,7 @@ O que a cotação traz, sempre:
 - **Ida e volta completas**: em ida e volta, o script busca os voos de volta de cada opção (1 busca extra por opção; `--no-return` desliga) e o preço passa a ser o da viagem montada.
 - Para cada trecho: horários, número de cada voo, **duração de cada voo, de cada conexão (com a cidade) e duração total**; avisa troca de aeroporto e pernoite.
 - **Link "Validar no Google Flights"** em cada opção, já com os voos de ida selecionados.
+- **Semáforo de preço** em cada opção: 🟢 abaixo do típico (até o primeiro terço da faixa típica do Google, ou abaixo dela), 🟡 dentro da faixa típica, 🔴 acima da faixa. Sem faixa do Google, compara com a opção mais barata (🟢 até +5%, 🟡 até +15%, 🔴 acima). Na mensagem ao usuário, cite a cor da opção recomendada.
 
 A saída `--format text` lista as opções, durações, conexões e links; o `pdf_path` é o arquivo para enviar. Envie o PDF (ou o HTML, se não houver navegador para gerar PDF) e, na mensagem, resuma a opção 1 e a recomendada em uma linha cada. Nunca gere cotação com `provider: mock` para um cliente real.
 

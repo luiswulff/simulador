@@ -17,6 +17,9 @@
   --muted: #595959;     /* texto secundário */
   --faint: #A5A5A5;     /* numerais */
   --line: #D1CFC9;      /* filetes finos e conexões */
+  --go: #1E8E3E;        /* semáforo de preço */
+  --caution: #E5A100;
+  --stop: #D93025;
   --font: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
@@ -49,11 +52,18 @@ body {
 .stat small { font-size: 11px; color: var(--muted); }
 
 .cards-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.cards-head .label:last-child { color: var(--muted); font-weight: 600; }
+.cards-head .legend .label { color: var(--muted); font-weight: 600; }
 .cards { display: grid; gap: 8px; }
 .card { background: var(--stone); padding: 12px 18px 10px; display: grid; gap: 4px; }
 .card-head { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .rank { font-size: 30px; line-height: .9; font-weight: 200; color: var(--faint); letter-spacing: -.02em; min-width: 38px; }
+.signal { display: inline-flex; align-items: center; gap: 6px; font-size: 8.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+.signal i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.signal.green i { background: var(--go); }
+.signal.yellow i { background: var(--caution); }
+.signal.red i { background: var(--stop); }
+.legend { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.legend .signal { color: var(--muted); font-weight: 600; letter-spacing: .12em; }
 .price { display: flex; align-items: baseline; gap: 8px; }
 .price b { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
 .price .per { font-size: 11.5px; color: var(--muted); }
@@ -98,7 +108,8 @@ body {
   .route-line { grid-column: 1 / -1; }
   .who { flex-basis: 100%; }
   .gf { margin-left: 0; }
-  .cards-head .label:last-child { display: none; }
+  .cards-head { flex-wrap: wrap; }
+  .legend { justify-content: flex-start; }
 }
 @media print {
   @page { size: A4; margin: 9mm 10mm; }
@@ -112,7 +123,8 @@ body {
   .hero h1 { font-size: 27px; }
   .stat b { font-size: 18px; }
   .card { padding: 8px 14px 5px; gap: 2px; }
-  .card-head { padding-bottom: 5px; }
+  .card-head { padding-bottom: 5px; gap: 4px 12px; }
+  .tag { font-size: 8px; padding: 2px 5px 1px; letter-spacing: .12em; }
   .rank { font-size: 26px; }
   .slice { padding: 3px 0 2px; }
   .ends b { font-size: 13px; }
@@ -147,14 +159,15 @@ body {
   <section class="stats"><div class="stat"><span class="label">A partir de</span><b>R$ 12.085</b><small>4 opções de 10 analisadas</small></div><div class="stat"><span class="label">Mais rápida</span><b>19h50</b><small>em voo e conexões, ida e volta</small></div><div class="stat"><span class="label">Faixa típica · Google</span><b>R$ 8.300–13.500</b><small>Preço atual dentro do típico</small></div></section>
 
   <section class="cards">
-    <div class="cards-head"><span class="label">Opções · do menor ao maior preço</span><span class="label">Valide cada opção no Google Flights</span></div>
+    <div class="cards-head"><span class="label">Opções · do menor ao maior preço</span><span class="legend"><span class="signal green"><i></i>Abaixo</span><span class="signal yellow"><i></i>Típico</span><span class="signal red"><i></i>Acima</span><span class="label">Faixa típica Google R$ 8.300–13.500</span></span></div>
     
     <article class="card">
       <header class="card-head">
         <span class="rank">01</span>
+        <span class="signal yellow" title="Preço típico"><i></i>Típico</span>
         <div class="price"><b>R$ 12.085,00</b><span class="per">R$ 6.042 por pessoa</span></div>
         <div class="who"><span class="air">LATAM</span><span class="tag accent">Mais em conta</span><span class="tag dark">Recomendada</span><span class="tag ">Mais rápida</span></div>
-        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhpAEgoyMDI2LTEyLTEwIiAKA0dSVRIKMjAyNi0xMi0xMBoDTElTKgJMQTIEODE0OGoHCAESA0dSVXIHCAESA0xJUxoeEgoyMDI2LTEyLTIwagcIARIDTElTcgcIARIDR1JVQAFAAUgBcAGYAQE&amp;tfu=EgIIAQ" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>
+        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhpAEgoyMDI2LTEyLTEwIiAKA0dSVRIKMjAyNi0xMi0xMBoDTElTKgJMQTIEODE0OGoHCAESA0dSVXIHCAESA0xJUxoeEgoyMDI2LTEyLTIwagcIARIDTElTcgcIARIDR1JVQAFAAUgBcAGYAQE&amp;tfu=EgIIAQ" target="_blank" rel="noopener" title="Validar no Google Flights">Google Flights&nbsp;↗</a>
       </header>
       
       <div class="slice">
@@ -179,9 +192,10 @@ body {
     <article class="card">
       <header class="card-head">
         <span class="rank">02</span>
+        <span class="signal yellow" title="Preço típico"><i></i>Típico</span>
         <div class="price"><b>R$ 12.721,00</b><span class="per">R$ 6.360 por pessoa</span></div>
         <div class="who"><span class="air">Lufthansa</span></div>
-        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhphEgoyMDI2LTEyLTEwIh8KA0dSVRIKMjAyNi0xMi0xMBoDRlJBKgJMSDIDNTA3IiAKA0ZSQRIKMjAyNi0xMi0xMRoDTElTKgJMSDIEMTE2OGoHCAESA0dSVXIHCAESA0xJUxoeEgoyMDI2LTEyLTIwagcIARIDTElTcgcIARIDR1JVQAFAAUgBcAGYAQE&amp;tfu=EgIIAQ" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>
+        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhphEgoyMDI2LTEyLTEwIh8KA0dSVRIKMjAyNi0xMi0xMBoDRlJBKgJMSDIDNTA3IiAKA0ZSQRIKMjAyNi0xMi0xMRoDTElTKgJMSDIEMTE2OGoHCAESA0dSVXIHCAESA0xJUxoeEgoyMDI2LTEyLTIwagcIARIDTElTcgcIARIDR1JVQAFAAUgBcAGYAQE&amp;tfu=EgIIAQ" target="_blank" rel="noopener" title="Validar no Google Flights">Google Flights&nbsp;↗</a>
       </header>
       
       <div class="slice">
@@ -206,9 +220,10 @@ body {
     <article class="card">
       <header class="card-head">
         <span class="rank">03</span>
+        <span class="signal red" title="Acima do típico"><i></i>Acima</span>
         <div class="price"><b>R$ 13.635,00</b><span class="per">R$ 6.818 por pessoa</span></div>
         <div class="who"><span class="air">LATAM · Lufthansa</span></div>
-        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhqDARIKMjAyNi0xMi0xMCIgCgNHUlUSCjIwMjYtMTItMTAaA0dJRyoCTEEyBDMzNjYiHwoDR0lHEgoyMDI2LTEyLTEwGgNGUkEqAkxIMgM1MDEiIAoDRlJBEgoyMDI2LTEyLTExGgNMSVMqAkxIMgQxMTY2agcIARIDR1JVcgcIARIDTElTGh4SCjIwMjYtMTItMjBqBwgBEgNMSVNyBwgBEgNHUlVAAUABSAFwAZgBAQ&amp;tfu=EgIIAQ" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>
+        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhqDARIKMjAyNi0xMi0xMCIgCgNHUlUSCjIwMjYtMTItMTAaA0dJRyoCTEEyBDMzNjYiHwoDR0lHEgoyMDI2LTEyLTEwGgNGUkEqAkxIMgM1MDEiIAoDRlJBEgoyMDI2LTEyLTExGgNMSVMqAkxIMgQxMTY2agcIARIDR1JVcgcIARIDTElTGh4SCjIwMjYtMTItMjBqBwgBEgNMSVNyBwgBEgNHUlVAAUABSAFwAZgBAQ&amp;tfu=EgIIAQ" target="_blank" rel="noopener" title="Validar no Google Flights">Google Flights&nbsp;↗</a>
       </header>
       
       <div class="slice">
@@ -233,9 +248,10 @@ body {
     <article class="card">
       <header class="card-head">
         <span class="rank">04</span>
+        <span class="signal red" title="Acima do típico"><i></i>Acima</span>
         <div class="price"><b>R$ 14.179,00</b><span class="per">R$ 7.090 por pessoa</span></div>
         <div class="who"><span class="air">ITA · Tap Air Portugal</span></div>
-        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhpgEgoyMDI2LTEyLTEwIh8KA0dSVRIKMjAyNi0xMi0xMBoDRkNPKgJBWjIDNjc5Ih8KA0ZDTxIKMjAyNi0xMi0xMRoDTElTKgJUUDIDODM1agcIARIDR1JVcgcIARIDTElTGh4SCjIwMjYtMTItMjBqBwgBEgNMSVNyBwgBEgNHUlVAAUABSAFwAZgBAQ&amp;tfu=EgIIAQ" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>
+        <a class="gf" href="https://www.google.com/travel/flights?hl=pt&amp;gl=br&amp;curr=BRL&amp;tfs=CBwQAhpgEgoyMDI2LTEyLTEwIh8KA0dSVRIKMjAyNi0xMi0xMBoDRkNPKgJBWjIDNjc5Ih8KA0ZDTxIKMjAyNi0xMi0xMRoDTElTKgJUUDIDODM1agcIARIDR1JVcgcIARIDTElTGh4SCjIwMjYtMTItMjBqBwgBEgNMSVNyBwgBEgNHUlVAAUABSAFwAZgBAQ&amp;tfu=EgIIAQ" target="_blank" rel="noopener" title="Validar no Google Flights">Google Flights&nbsp;↗</a>
       </header>
       
       <div class="slice">
@@ -259,10 +275,10 @@ body {
     </article>
   </section>
 
-  <p class="note-text">Valores totais para 2 adultos, em R$, consultados no Google Flights em 21 out 2026, 10:24. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.</p>
+  <p class="note-text">Valores totais para 2 adultos, em R$, consultados no Google Flights em 21 out 2026, 10:32. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.</p>
   <footer class="foot">
     <span class="label">Argos Core</span>
-    <span class="label">Cotação AC-261021-GRULIS-17E5 · Válida até 22 out, 10:24</span>
+    <span class="label">Cotação AC-261021-GRULIS-D3CB · Válida até 22 out, 10:32</span>
   </footer>
 </main>
 </body>

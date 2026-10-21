@@ -772,6 +772,26 @@ def render_slice(label: str, s: dict) -> str:
       </div>"""
 
 
+SIGNAL_LABEL = {"green": "Abaixo do típico", "yellow": "Preço típico", "red": "Acima do típico"}
+
+
+def price_signal(amount: float, insights: dict | None, cheapest: float) -> dict:
+    """Semáforo de preço. Com a faixa típica do Google [mín, máx]: verde até o primeiro terço da faixa
+    (ou abaixo dela), amarelo dentro da faixa, vermelho acima. Sem a faixa: relativo à opção mais barata
+    da cotação (verde até +5%, amarelo até +15%, vermelho acima)."""
+    rng = (insights or {}).get("typical_range") or []
+    if len(rng) == 2 and rng[1] > rng[0] > 0:
+        lo, hi = rng
+        level = "green" if amount <= lo + (hi - lo) / 3 else "yellow" if amount <= hi else "red"
+        short = {"green": "Abaixo", "yellow": "Típico", "red": "Acima"}[level]
+        return {"level": level, "label": SIGNAL_LABEL[level], "short": short, "basis": "google_typical_range", "range": [lo, hi]}
+    ratio = amount / cheapest if cheapest else 1
+    level = "green" if ratio <= 1.05 else "yellow" if ratio <= 1.15 else "red"
+    labels = {"green": "Melhor preço", "yellow": "Até 15% acima", "red": "Mais de 15% acima"}
+    short = {"green": "Melhor", "yellow": "Até +15%", "red": "+15%"}[level]
+    return {"level": level, "label": labels[level], "short": short, "basis": "cheapest_option"}
+
+
 def render_card(rank: int, o: dict, tags: list, seats: int) -> str:
     amount, currency = o["price"]["amount"], o["price"]["currency"]
     per = f'<span class="per">{esc(money_short(amount / seats, currency))} por pessoa</span>' if seats > 1 else ""
@@ -783,11 +803,12 @@ def render_card(rank: int, o: dict, tags: list, seats: int) -> str:
     elif o.get("return_missing"):
         rows += '<div class="slice note">Volta: detalhes indisponíveis nesta consulta; confira no link.</div>'
     link = o.get("validation_url") or (o.get("booking") or {}).get("google_flights_url")
-    link_html = f'<a class="gf" href="{esc(link)}" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>' if link else ""
+    link_html = f'<a class="gf" href="{esc(link)}" target="_blank" rel="noopener" title="Validar no Google Flights">Google Flights&nbsp;↗</a>' if link else ""
     return f"""
     <article class="card">
       <header class="card-head">
         <span class="rank">{rank:02d}</span>
+        <span class="signal {esc(o["signal"]["level"])}" title="{esc(o["signal"]["label"])}"><i></i>{esc(o["signal"]["short"])}</span>
         <div class="price"><b>{esc(money_q(amount, currency))}</b>{per}</div>
         <div class="who"><span class="air">{esc(" · ".join(a for a in o["airlines"] if a))}</span>{tag_html}</div>
         {link_html}
@@ -855,6 +876,9 @@ def cmd_quote(a: argparse.Namespace) -> dict:
     seats = q["adults"] + len(q.get("children_ages") or [])
     fastest = min(chosen, key=lambda o: o["total_duration_minutes"] or 10**9)
     cards, options_out = [], []
+    insights = result.get("price_insights")
+    for o in chosen:
+        o["signal"] = price_signal(o["price"]["amount"], insights, chosen[0]["price"]["amount"])
     for rank, o in enumerate(chosen, 1):
         tags = []
         if rank == 1:
@@ -866,6 +890,7 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         cards.append(render_card(rank, o, tags, seats))
         options_out.append({
             "rank": rank, "price": o["price"], "airlines": o["airlines"], "tags": [t for t, _ in tags],
+            "signal": o["signal"],
             "total_duration_minutes": o["total_duration_minutes"],
             "slices": [{"from": s["origin"], "to": s["destination"], "departure": s["departure"], "duration_minutes": s["duration_minutes"],
                         "flights": [seg["flight_number"] for seg in s["segments"]],
@@ -904,6 +929,14 @@ def cmd_quote(a: argparse.Namespace) -> dict:
     footnote = (f"{mock_note}Valores totais para {', '.join(pax)}, em {CURRENCY_SYMBOL.get(currency, currency)}, consultados no Google Flights em "
                 f"{now.day} {MONTHS[now.month - 1]} {now.year}, {now:%H:%M}. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. "
                 "Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.")
+    if chosen[0]["signal"]["basis"] == "google_typical_range":
+        lo, hi = chosen[0]["signal"]["range"]
+        steps = [("green", "Abaixo"), ("yellow", "Típico"), ("red", "Acima")]
+        basis = f"Faixa típica Google {money_short(lo, currency)}–{money_short(hi, currency).split(' ', 1)[1]}"
+    else:
+        steps = [("green", "Até +5%"), ("yellow", "Até +15%"), ("red", "Mais de 15%")]
+        basis = "Comparado à opção mais barata"
+    signal_legend_html = "".join(f'<span class="signal {lvl}"><i></i>{esc(txt)}</span>' for lvl, txt in steps) + f'<span class="label">{esc(basis)}</span>'
     values = {
         "title": f"Cotação {o_code}–{d_code}",
         "brand": esc(brand),
@@ -918,6 +951,7 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         "print_zoom": f"{min(1.0, max(0.78, 22 / max(1, sum(len(sl['segments']) * 2 - 1 for o in chosen for sl in o['slices'])))):.2f}",
         "summary_html": summary_html,
         "options_html": "".join(cards),
+        "signal_legend": signal_legend_html,
         "footnote": esc(footnote),
     }
     template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "quote.html")
@@ -1014,7 +1048,8 @@ def to_text(result: dict) -> str:
                 + (" (conexões: " + ", ".join(f"{l['airport']} {fmt_minutes(l['minutes'])}" for l in sl["layovers"]) + ")" if sl["layovers"] else " direto")
                 for sl in o["slices"])
             tags = f" [{', '.join(o['tags'])}]" if o["tags"] else ""
-            lines.append(f"  {o['rank']}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(o['airlines'])}{tags} | {legs}")
+            light = {"green": "🟢", "yellow": "🟡", "red": "🔴"}.get((o.get("signal") or {}).get("level"), "")
+            lines.append(f"  {o['rank']}. {light} {money(o['price']['amount'], o['price']['currency'])} | {', '.join(o['airlines'])}{tags} | {legs}")
             lines.append(f"     {o['validation_url']}")
         return "\n".join(lines)
     if result.get("kind", "").startswith("watch"):

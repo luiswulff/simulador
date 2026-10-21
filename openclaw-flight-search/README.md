@@ -65,6 +65,11 @@ O comando `quote` transforma uma busca numa cotação de **uma página A4**, em 
 - **ida e volta completas** (o script busca a volta de cada opção: +1 busca SerpApi por opção, com cache; `--no-return` desliga);
 - cada trecho com barra proporcional ao tempo, **cada voo e cada conexão com duração** e a **duração total**;
 - link **"Validar no Google Flights"** em cada opção, já com os voos de ida selecionados.
+- **semáforo de preço** em cada opção, com legenda:
+  - 🟢 **Abaixo** — no primeiro terço da faixa típica do Google para a rota e as datas, ou abaixo dela;
+  - 🟡 **Típico** — dentro da faixa típica;
+  - 🔴 **Acima** — acima da faixa típica.
+  Sem a faixa do Google, a régua é a opção mais barata da cotação (🟢 até +5%, 🟡 até +15%, 🔴 acima). O JSON de `quote` traz o campo `signal` de cada opção.
 
 ```bash
 python3 $S search --from GRU --to LIS --nearby --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 60 > busca.json

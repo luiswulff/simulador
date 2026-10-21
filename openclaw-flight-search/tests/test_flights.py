@@ -219,9 +219,11 @@ class TestQuote(Base):
         self.assertNotIn("{{", page)
         self.assertIn("Helena &lt;Prado&gt;", page)
         self.assertIn("Conexão em Brasília <b>1h20</b>", page)
-        self.assertIn("Validar no Google Flights", page)
+        self.assertIn("Google Flights", page)
         self.assertIn("R$ 175 por pessoa", page)
         self.assertIn("Argos Core", page)
+        self.assertEqual(q["options"][0]["signal"]["level"], "green")     # 350 no 1º terço de [400, 900]
+        self.assertIn('class="signal green"', page)
 
     def test_quote_round_trip_fetches_returns(self):
         src = self.make_search(("--return", FUTURE_RET))
@@ -259,6 +261,22 @@ class TestQuote(Base):
 
     def test_quote_needs_input(self):
         self.assertEqual(run("quote")[1]["error"]["code"], "invalid_request")
+
+
+class TestPriceSignal(unittest.TestCase):
+    def test_with_google_range(self):
+        pi = {"typical_range": [9000, 12000]}           # terço inferior vai até 10.000
+        self.assertEqual(flights.price_signal(8500, pi, 8500)["level"], "green")
+        self.assertEqual(flights.price_signal(10000, pi, 8500)["level"], "green")
+        self.assertEqual(flights.price_signal(11000, pi, 8500)["level"], "yellow")
+        self.assertEqual(flights.price_signal(12000, pi, 8500)["level"], "yellow")
+        self.assertEqual(flights.price_signal(12001, pi, 8500)["level"], "red")
+
+    def test_without_range_uses_cheapest(self):
+        self.assertEqual(flights.price_signal(1050, None, 1000)["level"], "green")
+        self.assertEqual(flights.price_signal(1150, None, 1000)["level"], "yellow")
+        self.assertEqual(flights.price_signal(1151, {}, 1000)["level"], "red")
+        self.assertEqual(flights.price_signal(1151, {}, 1000)["basis"], "cheapest_option")
 
 
 class TestAirports(unittest.TestCase):
