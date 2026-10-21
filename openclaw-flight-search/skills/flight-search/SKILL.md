@@ -28,6 +28,7 @@ Script: `python3 {baseDir}/scripts/flights.py` (somente biblioteca padrão; a ch
    ```
    python3 {baseDir}/scripts/flights.py search --from GRU --to LIS --depart 2026-11-10 --return 2026-11-20 --adults 2 --format text
    ```
+   Para achar opções mais baratas por outros aeroportos da cidade, use `--nearby` (ex.: GRU → GRU, CGH, VCP) ou liste-os: `--from GRU,VCP --to LIS,OPO`.
 4. **Responder.** Apresente as 3–5 melhores opções: preço total, cia, horários (locais), duração e escalas, e o trade-off (mais barato × mais rápido × direto). Se aparecer "Avaliação do Google", diga se o preço está baixo/típico/alto e a faixa típica — isso ajuda a decidir entre comprar agora ou criar um monitor. Lembre que preços mudam a qualquer momento.
 5. **Comprar** é com o usuário: indique a companhia e o link `booking.google_flights_url` (saída JSON).
 
@@ -35,7 +36,8 @@ Script: `python3 {baseDir}/scripts/flights.py` (somente biblioteca padrão; a ch
 
 | Opção | Uso |
 |---|---|
-| `--from` / `--to` | IATA (obrigatório) |
+| `--from` / `--to` | IATA (obrigatório); aceita lista `GRU,VCP` |
+| `--nearby` | inclui aeroportos da mesma cidade |
 | `--depart` / `--return` | `AAAA-MM-DD`; sem `--return` = só ida |
 | `--adults N`, `--children-ages 5,9`, `--infants N` | passageiros (máx. 9; bebês ≤ adultos) |
 | `--cabin` | `economy` (padrão), `premium_economy`, `business`, `first` |
@@ -48,20 +50,23 @@ Script: `python3 {baseDir}/scripts/flights.py` (somente biblioteca padrão; a ch
 | `--limit N` | padrão 10 |
 | `--currency` | padrão `BRL` |
 
-## Cotação para o cliente
+## Cotação (uma página)
 
-Quando o usuário pedir uma **cotação/proposta** para enviar a um cliente, gere o documento a partir de uma busca já feita (não gasta nova busca):
+Quando o usuário pedir uma **cotação**, faça a busca incluindo aeroportos próximos (`--nearby`) para achar rotas e conexões mais baratas, e gere o documento a partir dela:
 
 ```
-python3 {baseDir}/scripts/flights.py search --from GRU --to LIS --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 30 > /tmp/busca.json
-python3 {baseDir}/scripts/flights.py quote --from-json /tmp/busca.json --client "Helena Prado" --pdf --format text
+python3 {baseDir}/scripts/flights.py search --from GRU --to LIS --nearby --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 60 > /tmp/busca.json
+python3 {baseDir}/scripts/flights.py quote --from-json /tmp/busca.json --client "Nome do cliente" --pdf --format text
 ```
 
-- A curadoria é automática: **I** recomendação da casa (equilíbrio preço × tempo), **II** a mais econômica e **III** a mais rápida ou uma alternativa. Use `--options 1..5` para mudar a quantidade.
-- `--note "texto"` substitui a carta padrão por uma mensagem sua ao cliente (parágrafos separados por quebra de linha). Escreva em tom cordial e sóbrio, sem exageros.
-- A saída informa `html_path` e `pdf_path`. Envie o **PDF** ao cliente (ou o HTML se não houver navegador para gerar o PDF). Não mostre ao cliente a saída técnica do comando.
-- Marca, consultor e contatos vêm de `FLIGHTS_BRAND_NAME`, `FLIGHTS_BRAND_TAGLINE`, `FLIGHTS_ADVISOR_NAME`, `FLIGHTS_ADVISOR_TITLE`, `FLIGHTS_CONTACT_EMAIL`, `FLIGHTS_CONTACT_PHONE` (no `.env`) ou das opções `--brand`, `--advisor`, `--email`, `--phone`.
-- Nunca gere cotação com `provider: mock` para um cliente real.
+O que a cotação traz, sempre:
+- **Opção principal** (melhor equilíbrio preço × tempo) **+ 2 ou 3 alternativas com conexão**, as mais baratas encontradas (`--extra 2|3`, padrão 3).
+- Tudo **do mais barato ao mais caro**, com selos "Mais em conta", "Recomendada" e "Mais rápida".
+- **Ida e volta completas**: em ida e volta, o script busca os voos de volta de cada opção (1 busca extra por opção; `--no-return` desliga) e o preço passa a ser o da viagem montada.
+- Para cada trecho: horários, número de cada voo, **duração de cada voo, de cada conexão (com a cidade) e duração total**; avisa troca de aeroporto e pernoite.
+- **Link "Validar no Google Flights"** em cada opção, já com os voos de ida selecionados.
+
+A saída `--format text` lista as opções, durações, conexões e links; o `pdf_path` é o arquivo para enviar. Envie o PDF (ou o HTML, se não houver navegador para gerar PDF) e, na mensagem, resuma a opção 1 e a recomendada em uma linha cada. Nunca gere cotação com `provider: mock` para um cliente real.
 
 ## Monitor de preço
 

@@ -6,213 +6,139 @@
 <title>{{title}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
-/* Folio de ateliê: uma folha de papelaria sobre a mesa — cabeçalho-monograma, rota em didone,
-   carta do consultor, seleção curada (I, II, III), leitura de mercado em escala, condições. */
+/* Uma página: cabeçalho discreto, rota, três números-resumo e cartões do menor ao maior preço.
+   Cada trecho é uma linha com barra proporcional ao tempo: voo (escuro) e conexão (claro). */
 :root {
-  --desk: #E4E6E8;        /* mesa, atrás da folha */
-  --paper: #F7F7F4;       /* papel porcelana, levemente frio */
-  --ink: #161B2E;         /* tinta azul-noite */
-  --ink-soft: #4A5063;    /* texto secundário */
-  --rule: #CDD0D4;        /* filetes */
-  --patina: #3D7A6C;      /* verde pátina — único acento */
-  --patina-wash: #E3ECE8; /* fundo suave do destaque */
-  --font-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
-  --font-body: "Jost", "Futura", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
-  --font-data: "DM Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --bg: #FFFFFF;
+  --surface: #F5F5F7;
+  --fg: #1D1D1F;
+  --muted: #6E6E73;
+  --hair: #D2D2D7;
+  --flight: #1D1D1F;
+  --wait: #C7C7CC;
+  --accent: #0066CC;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
-html { background: var(--desk); }
+html, body { background: var(--bg); }
 body {
-  margin: 0; background: var(--desk); color: var(--ink);
-  font: 300 15px/1.6 var(--font-body);
-  padding-block: 48px 64px;
+  margin: 0; color: var(--fg); font: 400 13px/1.45 var(--font);
+  font-feature-settings: "tnum" 1, "cv11" 1; -webkit-font-smoothing: antialiased;
+  padding-block: 28px 36px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  -webkit-font-smoothing: antialiased;
 }
-.sheet {
-  max-width: 860px; margin: 0 auto; background: var(--paper);
-  box-shadow: 0 1px 2px rgba(22, 27, 46, .06), 0 24px 60px -24px rgba(22, 27, 46, .25);
-  padding: clamp(28px, 6vw, 72px);
-  display: grid; gap: clamp(40px, 6vw, 64px);
-}
-.eyebrow {
-  font: 500 10.5px/1.4 var(--font-body); letter-spacing: .22em; text-transform: uppercase; color: var(--ink-soft);
-}
-.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.page { max-width: 820px; margin: 0 auto; display: grid; gap: 18px; }
 
-/* Cabeçalho */
-.masthead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 24px; }
-.house { display: flex; align-items: center; gap: 16px; }
-.monogram {
-  width: 52px; height: 52px; border: 1px solid var(--ink); display: grid; place-items: center;
-  font: italic 400 20px/1 var(--font-display); letter-spacing: .02em;
-}
-.house-name { font: 500 12px/1.3 var(--font-body); letter-spacing: .28em; text-transform: uppercase; }
-.house-tag { font: italic 400 14px/1.3 var(--font-display); color: var(--ink-soft); margin-top: 4px; }
-.ref { display: grid; grid-template-columns: auto auto; gap: 4px 20px; text-align: left; }
-.ref dt { font: 500 10px/1.6 var(--font-body); letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
-.ref dd { margin: 0; font: 400 12px/1.6 var(--font-data); }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 11.5px; }
+.top .brand { color: var(--fg); font-weight: 600; font-size: 13px; letter-spacing: -.01em; }
+.top .ref { display: flex; gap: 14px; flex-wrap: wrap; }
 
-/* Rota */
-.route { display: grid; gap: 18px; border-top: 1px solid var(--ink); padding-top: 28px; }
-.route h1 {
-  margin: 0; font: 400 clamp(40px, 8vw, 76px)/1 var(--font-display); letter-spacing: -.01em; text-wrap: balance;
-}
-.route h1 em { font-style: italic; color: var(--patina); }
-.route-meta { display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 14px; color: var(--ink-soft); }
-.route-meta b { font-weight: 500; color: var(--ink); }
+.hero { display: grid; gap: 4px; }
+.hero h1 { margin: 0; font-size: 30px; line-height: 1.1; font-weight: 600; letter-spacing: -.025em; text-wrap: balance; }
+.hero h1 span { color: var(--muted); font-weight: 400; }
+.hero .meta { color: var(--muted); font-size: 13px; }
+.hero .client { margin: 2px 0 0; font-size: 13px; }
 
-/* Carta */
-.letter { display: grid; grid-template-columns: 160px 1fr; gap: 24px; }
-.letter p { margin: 0 0 12px; max-width: 60ch; font-size: 16px; }
-.letter .salutation { font: italic 400 22px/1.3 var(--font-display); margin-bottom: 14px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border-radius: 12px; padding: 10px 14px; display: grid; gap: 1px; }
+.stat span { font-size: 11px; color: var(--muted); }
+.stat b { font-size: 19px; font-weight: 600; letter-spacing: -.015em; }
+.stat small { font-size: 11px; color: var(--muted); }
 
-/* Seleção */
-.selection { display: grid; gap: 20px; }
-.selection-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-.selection-head h2 { margin: 0; font: 400 30px/1.1 var(--font-display); }
-.option { border-top: 1px solid var(--rule); padding-top: 28px; display: grid; gap: 22px; }
-.option.featured { background: var(--patina-wash); border-top: 2px solid var(--patina); padding: 28px clamp(18px, 4vw, 32px) 30px; }
-.option-head { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 22px; align-items: baseline; }
-.numeral { font: italic 400 34px/1 var(--font-display); color: var(--patina); min-width: 1.6em; }
-.option-title { display: grid; gap: 4px; min-width: 0; }
-.option-title .eyebrow { color: var(--patina); }
-.option-title h3 { margin: 0; font: 400 24px/1.2 var(--font-display); }
-.price { text-align: right; }
-.price .amount { font: 400 30px/1 var(--font-display); white-space: nowrap; }
-.price .amount small { font: 500 11px/1 var(--font-body); letter-spacing: .18em; margin-right: 6px; vertical-align: 6px; }
-.price .per { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+.cards { display: grid; gap: 10px; }
+.card { background: var(--surface); border-radius: 14px; padding: 12px 16px 10px; display: grid; gap: 4px; }
+.card-head { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid var(--hair); }
+.rank { width: 20px; height: 20px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--muted); }
+.price { display: flex; align-items: baseline; gap: 8px; }
+.price b { font-size: 18px; font-weight: 600; letter-spacing: -.015em; }
+.price .per { font-size: 11.5px; color: var(--muted); }
+.who { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.air { font-weight: 500; margin-right: 2px; }
+.tag { white-space: nowrap; font-size: 10.5px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.tag.accent { background: var(--accent); color: var(--bg); }
+.tag.dark { background: var(--fg); color: var(--bg); }
+.gf { margin-left: auto; color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.gf:hover { text-decoration: underline; }
+.gf:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
-/* Trecho: horário — linha de voo — horário */
-.leg { display: grid; gap: 10px; }
-.leg-label { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
-.path { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; }
-.end { display: grid; gap: 2px; }
-.end.arr { text-align: right; }
-.end .time { font: 400 28px/1 var(--font-data); font-variant-numeric: tabular-nums; }
-.end .time sup { font-size: 11px; color: var(--patina); margin-left: 2px; }
-.end .code { font: 500 11px/1.4 var(--font-body); letter-spacing: .2em; color: var(--ink-soft); }
-.track { position: relative; height: 34px; min-width: 0; }
-.track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--ink); }
-.track::after {
-  content: ""; position: absolute; right: -1px; top: calc(50% - 4px); width: 8px; height: 8px;
-  border-top: 1px solid var(--ink); border-right: 1px solid var(--ink); transform: rotate(45deg);
-}
-.stop { position: absolute; top: calc(50% - 5px); width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ink); }
-.stop-label { position: absolute; top: calc(50% + 9px); transform: translateX(-50%); font: 500 10px/1 var(--font-body); letter-spacing: .14em; color: var(--ink-soft); white-space: nowrap; }
-.track-dur { position: absolute; left: 50%; bottom: calc(50% + 7px); transform: translateX(-50%); font: 400 11.5px/1 var(--font-data); color: var(--ink-soft); background: inherit; white-space: nowrap; }
-.facts { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--ink-soft); }
-.facts b { font-weight: 500; color: var(--ink); }
-.return-line { font-size: 13.5px; color: var(--ink-soft); border-top: 1px dashed var(--rule); padding-top: 12px; }
-.return-line b { font-weight: 500; color: var(--ink); }
-.why { font: italic 400 16px/1.5 var(--font-display); color: var(--ink); max-width: 62ch; margin: 0; }
+.slice { display: grid; grid-template-columns: 74px minmax(0, 1fr) 78px; gap: 14px; align-items: start; padding: 6px 0 4px; }
+.slice + .slice { border-top: 1px solid var(--hair); }
+.slice.note { display: block; color: var(--muted); font-size: 12px; }
+.when { display: grid; font-size: 11.5px; color: var(--muted); padding-top: 1px; }
+.when b { color: var(--fg); font-weight: 600; font-size: 12px; }
+.route-line { display: grid; gap: 4px; min-width: 0; }
+.ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.ends b { color: var(--fg); font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
+.ends sup { font-size: 9.5px; color: var(--accent); font-weight: 600; }
+.bar { display: flex; gap: 3px; }
+.bar i { display: block; height: 5px; border-radius: 3px; flex-basis: 0; min-width: 6px; }
+.bar .f { background: var(--flight); }
+.bar .w { background: var(--wait); }
+.legs { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 11px; color: var(--muted); }
+.legs b { color: var(--fg); font-weight: 600; }
+.legs .lay b { color: var(--muted); font-weight: 600; }
+.total { text-align: right; display: grid; font-size: 11.5px; color: var(--muted); padding-top: 1px; }
+.total b { color: var(--fg); font-weight: 600; font-size: 13px; }
 
-/* Leitura de mercado */
-.market { display: grid; grid-template-columns: 160px 1fr; gap: 24px; }
-.market p { margin: 0 0 18px; max-width: 60ch; }
-.scale { position: relative; height: 64px; margin: 6px 8px 0; }
-.scale .base { position: absolute; left: 0; right: 0; top: 30px; border-top: 1px solid var(--rule); }
-.scale .band { position: absolute; top: 24px; height: 13px; background: var(--patina-wash); border-left: 1px solid var(--patina); border-right: 1px solid var(--patina); }
-.scale .tick { position: absolute; top: 44px; transform: translateX(-50%); font: 400 11px/1 var(--font-data); color: var(--ink-soft); white-space: nowrap; }
-.scale .marker { position: absolute; top: 0; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; }
-.scale .marker span { font: 500 10px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
-.scale .marker i { width: 1px; height: 22px; background: var(--ink); }
-.scale .band-label { position: absolute; top: 44px; transform: translateX(-50%); font: 500 10px/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--patina); white-space: nowrap; }
+.foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 10.5px; line-height: 1.5; border-top: 1px solid var(--hair); padding-top: 10px; }
+.foot p { margin: 0; max-width: 92ch; }
+.foot .sig { white-space: nowrap; font-weight: 500; }
 
-/* Condições e assinatura */
-.terms { display: grid; grid-template-columns: 160px 1fr; gap: 24px; border-top: 1px solid var(--rule); padding-top: 28px; }
-.terms ol { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-soft); display: grid; gap: 8px; max-width: 70ch; }
-.signoff { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px; border-top: 1px solid var(--ink); padding-top: 28px; }
-.signature { font: italic 400 30px/1 var(--font-display); }
-.signoff .who { margin-top: 8px; font-size: 13px; color: var(--ink-soft); }
-.contact { text-align: right; font: 400 12.5px/1.8 var(--font-data); color: var(--ink-soft); }
-.colophon { max-width: 860px; margin: 18px auto 0; text-align: center; font: 500 10px/1.6 var(--font-body); letter-spacing: .22em; text-transform: uppercase; color: var(--ink-soft); }
-
-@media (max-width: 640px) {
-  .letter, .market, .terms { grid-template-columns: 1fr; gap: 10px; }
-  .option-head { grid-template-columns: auto 1fr; }
-  .price { grid-column: 1 / -1; text-align: left; }
-  .end .time { font-size: 22px; }
-  .contact { text-align: left; }
+@media (max-width: 620px) {
+  .hero h1 { font-size: 25px; }
+  .slice { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+  .when { grid-column: 1; display: flex; gap: 6px; }
+  .total { grid-column: 2; grid-row: 1; }
+  .route-line { grid-column: 1 / -1; }
+  .gf { margin-left: 0; }
+  .who { flex-basis: 100%; }
 }
 @media print {
-  @page { size: A4; margin: 16mm 15mm; }
-  :root { --paper: #FFFFFF; --desk: #FFFFFF; }
-  html, body { background: var(--paper); padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .sheet { box-shadow: none; padding: 0; max-width: none; gap: 34px; }
-  .option { break-inside: avoid; }
-  .colophon { display: none; }
+  @page { size: A4; margin: 9mm 10mm; }
+  body { padding: 0; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { max-width: none; gap: 12px; }
+  .hero h1 { font-size: 26px; }
+  .stat { padding: 8px 12px; }
+  .stat b { font-size: 17px; }
+  .stats { gap: 8px; }
+  .stat { padding: 6px 12px; }
+  .cards { gap: 8px; }
+  .card { padding: 8px 14px 5px; gap: 2px; }
+  .card-head { padding-bottom: 4px; }
+  .tag { font-size: 9.5px; padding: 1px 7px; }
+  .slice { padding: 3px 0 2px; }
+  .ends b { font-size: 13px; }
+  .legs { font-size: 10.5px; }
+  .foot { font-size: 9.5px; padding-top: 8px; }
+  .card { break-inside: avoid; }
 }
 </style>
 </head>
 <body>
-<main class="sheet">
-  <header class="masthead">
-    <div class="house">
-      <div class="monogram" aria-hidden="true">{{monogram}}</div>
-      <div>
-        <div class="house-name">{{brand}}</div>
-        <div class="house-tag">{{tagline}}</div>
-      </div>
-    </div>
-    <dl class="ref">
-      <dt>Proposta</dt><dd>{{reference}}</dd>
-      <dt>Emitida</dt><dd>{{issued}}</dd>
-      <dt>Válida até</dt><dd>{{valid_until}}</dd>
-    </dl>
-  </header>
+<main class="page">
+  <div class="top">
+    <span class="brand">{{brand}}</span>
+    <span class="ref"><span>Cotação {{reference}}</span><span>Emitida {{issued}}</span><span>Válida até {{valid_until}}</span></span>
+  </div>
 
-  <section class="route">
-    <div class="eyebrow">{{trip_kind}} · {{cabin}}</div>
-    <h1>{{origin_city}} <em>&amp;</em> {{destination_city}}</h1>
-    <div class="route-meta">
-      <span><b>{{origin_code}} → {{destination_code}}</b></span>
-      <span>{{dates_line}}</span>
-      <span>{{passengers_line}}</span>
-    </div>
+  <section class="hero">
+    <h1>{{route_title}}</h1>
+    <div class="meta">{{route_meta}}</div>
+    {{client_line}}
   </section>
 
-  <section class="letter">
-    <div class="eyebrow">Para {{client}}</div>
-    <div>
-      <p class="salutation">{{salutation}}</p>
-      {{note_html}}
-    </div>
-  </section>
+  <section class="stats">{{summary_html}}</section>
 
-  <section class="selection">
-    <div class="selection-head">
-      <h2>A seleção</h2>
-      <div class="eyebrow">{{options_count}} entre {{offers_considered}} tarifas analisadas</div>
-    </div>
-    {{options_html}}
-  </section>
+  <section class="cards">{{options_html}}</section>
 
-  {{market_html}}
-
-  <section class="terms">
-    <div class="eyebrow">Condições</div>
-    <ol>
-      <li>Valores totais para {{passengers_short}}, em {{currency_name}}, com taxas de embarque estimadas. Sujeitos a disponibilidade e confirmação no momento da emissão.</li>
-      <li>Tarifas aéreas mudam sem aviso. Esta proposta reflete a pesquisa de {{issued}} e é válida até {{valid_until}}; após esse prazo, refazemos a cotação.</li>
-      {{return_term}}
-      <li>Bagagem, marcação de assento e regras de alteração e reembolso variam por tarifa e são confirmadas antes da emissão.</li>
-      <li>Horários em hora local de cada aeroporto. Documentação de viagem é de responsabilidade do passageiro.</li>
-    </ol>
-  </section>
-
-  <footer class="signoff">
-    <div>
-      <div class="signature">{{advisor}}</div>
-      <div class="who">{{advisor_title}} · {{brand}}</div>
-    </div>
-    <div class="contact">{{contact_html}}</div>
+  <footer class="foot">
+    <p>{{footnote}}</p>
+    <span class="sig">{{brand}} · OpenClaw</span>
   </footer>
 </main>
-<p class="colophon">{{brand}} · Proposta {{reference}}</p>
 </body>
 </html>

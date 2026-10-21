@@ -1,7 +1,7 @@
 # OpenClaw · Flight Search
 
 Skill de **pesquisa e monitoramento de preços de voos** para agentes autônomos [OpenClaw](https://docs.openclaw.ai), usando o Google Flights via [SerpApi](https://serpapi.com).
-O agente busca, compara, avalia se o preço está bom e avisa quando baixar. **Não reserva nem compra** — a compra fica com você, pelo link do Google Flights.
+O agente busca, compara, avalia se o preço está bom, gera cotações de uma página e avisa quando baixar. **Não reserva nem compra** — a compra fica com você, pelo link do Google Flights.
 
 - Python 3.9+ só com biblioteca padrão (nada a instalar)
 - Avaliação de preço do Google (baixo / típico / alto + faixa típica)
@@ -57,27 +57,22 @@ Avaliação do Google: preço típico; faixa típica BRL 620,00–BRL 1.400,00
 
 Horários são **locais** de cada aeroporto. Preço é o **total** para todos os passageiros. Em ida e volta, o preço é da viagem completa, mas só os voos de ida são detalhados.
 
-## Cotação para o cliente
+## Cotação (uma página)
 
-O comando `quote` transforma uma busca em uma **proposta de viagem com acabamento de ateliê**: monograma da casa, rota em tipografia didone, carta ao cliente, seleção curada (I · recomendação da casa, II · a mais econômica, III · a mais rápida ou alternativa), linha de voo com horários e conexões, leitura de mercado em escala (faixa típica do Google × nossa recomendação), condições e assinatura do consultor. Sai em HTML e, com `--pdf`, em PDF A4 (requer Chrome/Chromium).
+O comando `quote` transforma uma busca numa cotação de **uma página A4**, em estilo minimalista: rota, três números-resumo (a partir de, mais rápida, faixa típica do Google) e cartões **do mais barato ao mais caro**:
+
+- **opção principal** (melhor equilíbrio preço × tempo) **+ 2 ou 3 alternativas com conexão**, as mais baratas da busca;
+- **ida e volta completas** (o script busca a volta de cada opção: +1 busca SerpApi por opção, com cache; `--no-return` desliga);
+- cada trecho com barra proporcional ao tempo, **cada voo e cada conexão com duração** e a **duração total**;
+- link **"Validar no Google Flights"** em cada opção, já com os voos de ida selecionados.
 
 ```bash
-python3 $S search --from GRU --to LIS --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 30 > busca.json
+python3 $S search --from GRU --to LIS --nearby --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 60 > busca.json
 python3 $S quote --from-json busca.json --client "Helena Prado" --pdf --format text
 ```
 
-Identidade da sua agência, uma vez só no `.env`:
-
-```
-FLIGHTS_BRAND_NAME=Nome da Agência
-FLIGHTS_BRAND_TAGLINE=Viagens sob medida · São Paulo
-FLIGHTS_ADVISOR_NAME=Seu Nome
-FLIGHTS_ADVISOR_TITLE=Consultor de viagens
-FLIGHTS_CONTACT_EMAIL=contato@suaagencia.com
-FLIGHTS_CONTACT_PHONE=+55 11 0000-0000
-```
-
-O visual fica em `skills/flight-search/templates/quote.html` (tokens de cor e fontes no topo do CSS) e pode ser ajustado sem tocar no código.
+Custo típico de uma cotação de ida e volta: 1 busca + 4 buscas de volta = **5 créditos SerpApi**.
+A marca exibida é **Argos Core** (mude com `FLIGHTS_BRAND_NAME` ou `--brand`). O visual fica em `skills/flight-search/templates/quote.html`.
 
 ## Monitor de preço
 

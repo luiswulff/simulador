@@ -35,6 +35,7 @@ SERPAPI_RESPONSE = {
             "total_duration": 65,
             "price": 489,
             "booking_token": "tok",
+            "departure_token": "dep-latam",
         }
     ],
     "other_flights": [
@@ -47,6 +48,7 @@ SERPAPI_RESPONSE = {
             ],
             "total_duration": 285,
             "price": 350,
+            "departure_token": "dep-gol",
         }
     ],
 }
@@ -193,27 +195,69 @@ class TestWatch(Base):
 
 
 class TestQuote(Base):
-    def test_quote_from_search_json(self):
+    def make_search(self, extra=()):
         os.environ["SERPAPI_API_KEY"] = "k"
         with mock.patch.object(flights, "http_json", return_value=SERPAPI_RESPONSE):
-            _, res = run("search", "--from", "CGH", "--to", "SDU", "--depart", FUTURE, "--return", FUTURE_RET, "--adults", "2")
+            _, res = run("search", "--from", "CGH", "--to", "SDU", "--depart", FUTURE, "--adults", "2", *extra)
         src = os.path.join(self.tmp.name, "busca.json")
         with open(src, "w") as f:
             json.dump(res, f)
-        out = os.path.join(self.tmp.name, "proposta.html")
-        code, q = run("quote", "--from-json", src, "--client", "Helena <Prado>", "--brand", "Casa Teste", "--output", out)
+        return src
+
+    def test_quote_one_way(self):
+        src = self.make_search()
+        out = os.path.join(self.tmp.name, "cotacao.html")
+        code, q = run("quote", "--from-json", src, "--client", "Helena <Prado>", "--output", out)
         self.assertEqual(code, 0, q)
-        self.assertEqual([o["role"] for o in q["options"]], ["recommended", "fastest"])  # a recomendada já é a mais barata
+        prices = [o["price"]["amount"] for o in q["options"]]
+        self.assertEqual(prices, sorted(prices))                      # do mais barato ao mais caro
+        self.assertEqual(q["options"][0]["tags"][0], "Mais em conta")
+        gol = next(o for o in q["options"] if o["airlines"] == ["GOL"])
+        self.assertEqual(gol["slices"][0]["layovers"], [{"airport": "BSB", "minutes": 80}])  # 10:40 → 12:00
         with open(out, encoding="utf-8") as f:
             page = f.read()
         self.assertNotIn("{{", page)
-        self.assertIn("Helena &lt;Prado&gt;", page)          # dados do cliente escapados
-        self.assertIn("R$ 175,00 por pessoa", page)          # 350 / 2 adultos
-        self.assertIn("faixa típica", page)                   # leitura de mercado
-        self.assertIn("Volta", page)
+        self.assertIn("Helena &lt;Prado&gt;", page)
+        self.assertIn("Conexão em Brasília <b>1h20</b>", page)
+        self.assertIn("Validar no Google Flights", page)
+        self.assertIn("R$ 175 por pessoa", page)
+        self.assertIn("Argos Core", page)
+
+    def test_quote_round_trip_fetches_returns(self):
+        src = self.make_search(("--return", FUTURE_RET))
+        with mock.patch.object(flights, "http_json", return_value=SERPAPI_RESPONSE) as http:
+            code, q = run("quote", "--from-json", src, "--output", os.path.join(self.tmp.name, "rt.html"))
+        self.assertEqual(code, 0, q)
+        self.assertEqual(q["return_lookups"], len(q["options"]))
+        self.assertTrue(all("departure_token=" in c.args[1] for c in http.call_args_list))
+        self.assertTrue(all(len(o["slices"]) == 2 for o in q["options"]))
+        with mock.patch.object(flights, "http_json", return_value=SERPAPI_RESPONSE) as http:
+            _, q2 = run("quote", "--from-json", src, "--no-return", "--output", os.path.join(self.tmp.name, "rt2.html"))
+        http.assert_not_called()
+        self.assertTrue(all(len(o["slices"]) == 1 for o in q2["options"]))
+
+    def test_select_options_keeps_connections(self):
+        def offer(i, price, stops, minutes):
+            segs = [{"flight_number": f"X{i}{n}", "from": "AAA", "to": "BBB", "departure": f"{FUTURE} 08:00",
+                     "arrival": f"{FUTURE} 09:00", "duration_minutes": 60} for n in range(stops + 1)]
+            return {"id": str(i), "price": {"amount": price, "currency": "BRL"}, "airlines": ["X"],
+                    "total_duration_minutes": minutes, "slices": [{"stops": stops, "segments": segs}]}
+        offers = [offer(1, 1000, 0, 300), offer(2, 900, 1, 900), offer(3, 950, 1, 700), offer(4, 980, 2, 1200), offer(5, 1100, 0, 290)]
+        picked = flights.select_options(offers, 3)
+        self.assertEqual(picked[0]["id"], "1")                      # direto equilibrado é a principal
+        self.assertEqual([o["id"] for o in picked[1:]], ["2", "3", "4"])  # alternativas com conexão, mais baratas
 
     def test_quote_needs_input(self):
         self.assertEqual(run("quote")[1]["error"]["code"], "invalid_request")
+
+
+class TestAirports(unittest.TestCase):
+    def test_nearby_and_lists(self):
+        self.assertEqual(flights.airport_list("gru", True), "GRU,CGH,VCP")
+        self.assertEqual(flights.airport_list("GIG,LIS", True), "GIG,SDU,LIS")
+        self.assertEqual(flights.airport_list("GRU,VCP", False), "GRU,VCP")
+        with self.assertRaises(flights.FlightSearchError):
+            flights.airport_list("GR", False)
 
 
 class TestEnvFile(Base):

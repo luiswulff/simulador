@@ -30,7 +30,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "2.1.0"
+VERSION = "3.0.0"
 USER_AGENT = f"openclaw-flight-search/{VERSION}"
 HTTP_TIMEOUT = 45
 MAX_FLEX_DAYS = 3
@@ -156,7 +156,7 @@ def cache_put(key: str, entry: dict) -> None:
 CABIN_SERPAPI = {"economy": 1, "premium_economy": 2, "business": 3, "first": 4}
 
 
-def search_serpapi(q: dict) -> list:
+def serpapi_params(q: dict) -> dict:
     key = os.environ.get("SERPAPI_API_KEY")
     if not key:
         raise FlightSearchError("SERPAPI_API_KEY não configurada (ambiente ou arquivo .env da skill).", "missing_credentials")
@@ -179,7 +179,11 @@ def search_serpapi(q: dict) -> list:
         params["return_date"] = q["return"]
     if q.get("max_stops") is not None:
         params["stops"] = min(q["max_stops"], 2) + 1  # 1=direto, 2=até 1 parada, 3=até 2 paradas
-    resp = http_json("GET", "https://serpapi.com/search.json?" + urllib.parse.urlencode(params), {})
+    return params
+
+
+def search_serpapi(q: dict) -> list:
+    resp = http_json("GET", "https://serpapi.com/search.json?" + urllib.parse.urlencode(serpapi_params(q)), {})
     if resp.get("error"):
         if "hasn't returned any results" in resp["error"]:
             return [], None
@@ -229,6 +233,28 @@ def normalize_serpapi(item: dict, q: dict, url: str | None, index: int) -> dict:
     return offer
 
 
+def serpapi_return(q: dict, departure_token: str) -> dict | None:
+    """Voos de volta para uma ida escolhida (1 busca). Devolve a melhor volta em preço × tempo,
+    o preço total da viagem e o link do Google Flights já com a ida selecionada."""
+    key = cache_key("serpapi-return", {"q": q, "token": departure_token})
+    entry = cache_get(key)
+    if entry is None:
+        resp = http_json("GET", "https://serpapi.com/search.json?" + urllib.parse.urlencode({**serpapi_params(q), "departure_token": departure_token}), {})
+        if resp.get("error"):
+            if "hasn't returned any results" in resp["error"]:
+                return None
+            raise FlightSearchError(f"SerpApi: {resp['error']}", "provider_error")
+        url = (resp.get("search_metadata") or {}).get("google_flights_url")
+        items = (resp.get("best_flights") or []) + (resp.get("other_flights") or [])
+        entry = {"url": url, "returns": [normalize_serpapi(item, q, url, i) for i, item in enumerate(items)]}
+        cache_put(key, entry)
+    returns = [r for r in entry["returns"] if r["price"]["amount"] is not None]
+    if not returns:
+        return None
+    best = sort_offers(returns, "best")[0]
+    return {"slice": best["slices"][0], "price": best["price"]["amount"], "airlines": best["airlines"], "url": entry["url"]}
+
+
 def search_mock(q: dict) -> list:
     """Ofertas fictícias e determinísticas — apenas para testes e simulação."""
     rng = random.Random(cache_key("mock", q))
@@ -241,9 +267,10 @@ def search_mock(q: dict) -> list:
         if q.get("max_stops") is not None:
             stops = min(stops, q["max_stops"])
         slices = []
-        legs = [(q["origin"], q["destination"], q["depart"])]
+        o_code, d_code = q["origin"].split(",")[0], q["destination"].split(",")[0]
+        legs = [(o_code, d_code, q["depart"])]
         if q.get("return"):
-            legs.append((q["destination"], q["origin"], q["return"]))
+            legs.append((d_code, o_code, q["return"]))
         for origin, dest, day in legs:
             start = dt.datetime.fromisoformat(day) + dt.timedelta(hours=rng.randint(5, 22), minutes=rng.choice([0, 15, 30, 45]))
             points = [origin] + rng.sample([h for h in hubs if h not in (origin, dest)], stops) + [dest]
@@ -277,6 +304,13 @@ def build_slice(segments: list, duration: int | None) -> dict:
     first, last = (segments[0], segments[-1]) if segments else ({}, {})
     if duration is None and segments:
         duration = minutes_between(first["departure"], last["arrival"])
+    # chegada e partida da conexão são no mesmo aeroporto (mesmo fuso): a diferença local é exata
+    layovers = []
+    for prev, nxt in zip(segments, segments[1:]):
+        wait = minutes_between(prev.get("arrival") or "", nxt.get("departure") or "")
+        overnight = (prev.get("arrival") or "")[:10] != (nxt.get("departure") or "")[:10]
+        layovers.append({"airport": prev.get("to"), "duration_minutes": wait, "overnight": overnight,
+                         "change_airport": prev.get("to") != nxt.get("from")})
     return {
         "origin": first.get("from"),
         "destination": last.get("to"),
@@ -285,6 +319,7 @@ def build_slice(segments: list, duration: int | None) -> dict:
         "duration_minutes": duration,
         "stops": max(len(segments) - 1, 0),
         "segments": segments,
+        "layovers": layovers,
     }
 
 
@@ -363,12 +398,31 @@ def sort_offers(offers: list, how: str) -> list:
 # Comandos
 
 
-def validate(a: argparse.Namespace) -> dict:
-    origin, dest = a.origin.upper(), a.destination.upper()
-    for code in (origin, dest):
+METRO = [  # aeroportos da mesma região metropolitana, usados por --nearby
+    ("GRU", "CGH", "VCP"), ("GIG", "SDU"), ("CNF", "PLU"), ("EZE", "AEP"), ("JFK", "EWR", "LGA"),
+    ("CDG", "ORY"), ("LHR", "LGW", "STN"), ("NRT", "HND"), ("MXP", "LIN"), ("FCO", "CIA"), ("ORD", "MDW"),
+    ("MIA", "FLL"), ("IAH", "HOU"), ("DXB", "DWC"), ("IST", "SAW"),
+]
+
+
+def airport_list(value: str, nearby: bool) -> str:
+    codes = []
+    for code in (c.strip().upper() for c in value.split(",") if c.strip()):
         if not re.fullmatch(r"[A-Z]{3}", code):
             raise FlightSearchError(f"Código IATA inválido: {code}. Use 'airports' para descobrir o código.", "invalid_request")
-    if origin == dest:
+        group = next((g for g in METRO if code in g), (code,)) if nearby else (code,)
+        for c in (code, *group):
+            if c not in codes:
+                codes.append(c)
+    if not codes or len(codes) > 7:
+        raise FlightSearchError("Informe de 1 a 7 aeroportos por ponta.", "invalid_request")
+    return ",".join(codes)
+
+
+def validate(a: argparse.Namespace) -> dict:
+    origin = airport_list(a.origin, getattr(a, "nearby", False))
+    dest = airport_list(a.destination, getattr(a, "nearby", False))
+    if set(origin.split(",")) & set(dest.split(",")):
         raise FlightSearchError("Origem e destino iguais.", "invalid_request")
     try:
         depart = dt.date.fromisoformat(a.depart)
@@ -631,25 +685,12 @@ def cmd_watch_check(a: argparse.Namespace) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Cotação para o cliente (HTML de papelaria, pronto para enviar ou imprimir em PDF)
+# Cotação (uma página, minimalista): opção principal + 2–3 alternativas com conexão,
+# do menor ao maior preço, com ida e volta, conexões e link de validação no Google Flights.
 
 WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
 MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
-CABIN_PT = {"economy": "Classe econômica", "premium_economy": "Premium economy", "business": "Classe executiva", "first": "Primeira classe"}
-CURRENCY_PT = {"BRL": "reais", "USD": "dólares americanos", "EUR": "euros"}
-ROMAN = ["I", "II", "III", "IV", "V"]
-AMENITIES_PT = [
-    (r"legroom \((\d+) cm\)", "Espaço entre poltronas {0} cm"),
-    (r"^Free Wi-Fi", "Wi-Fi gratuito"),
-    (r"^Wi-Fi for a fee", "Wi-Fi pago"),
-    (r"power & USB", "Tomada e USB na poltrona"),
-    (r"^In-seat power outlet", "Tomada na poltrona"),
-    (r"^In-seat USB", "USB na poltrona"),
-    (r"^On-demand video", "Entretenimento individual"),
-    (r"^Lie flat seat", "Assento-cama"),
-]
-
-
+CABIN_PT = {"economy": "Econômica", "premium_economy": "Premium Economy", "business": "Executiva", "first": "Primeira classe"}
 CURRENCY_SYMBOL = {"BRL": "R$", "USD": "US$", "EUR": "€", "GBP": "£"}
 
 
@@ -658,153 +699,101 @@ def money_q(amount: float, currency: str) -> str:
     return money(amount, currency).replace(currency, CURRENCY_SYMBOL.get(currency, currency), 1)
 
 
+def money_short(amount: float, currency: str) -> str:
+    """Sem centavos, para resumos: R$ 12.626."""
+    s = f"{amount:,.0f}".replace(",", ".")
+    return f"{CURRENCY_SYMBOL.get(currency, currency)} {s}"
+
+
 def esc(value) -> str:
     return html.escape(str(value if value is not None else ""), quote=True)
 
 
 def city_of(code: str | None) -> str:
-    return next((city for c, city, *_ in AIRPORTS if c == code), code or "")
+    code = (code or "").split(",")[0]
+    return next((city for c, city, *_ in AIRPORTS if c == code), code)
 
 
 def date_pt(value: str | dt.date) -> str:
     d = dt.date.fromisoformat(value[:10]) if isinstance(value, str) else value
-    return f"{WEEKDAYS[d.weekday()]}, {d.day} {MONTHS[d.month - 1]} {d.year}"
+    return f"{WEEKDAYS[d.weekday()]}, {d.day} {MONTHS[d.month - 1]}"
 
 
-def amenities_pt(segment: dict) -> list:
-    out = []
-    for raw in segment.get("amenities") or []:
-        for pattern, label in AMENITIES_PT:
-            m = re.search(pattern, raw)
-            if m:
-                out.append(label.format(*m.groups()))
-                break
-    return out
+def outbound_signature(offer: dict) -> tuple:
+    return tuple(seg.get("flight_number") for seg in offer["slices"][0]["segments"])
 
 
-def pick_options(offers: list, count: int) -> list:
-    """Curadoria: recomendação (preço × tempo), a mais econômica e a mais rápida, sem repetir."""
-    if not offers:
+def select_options(offers: list, extra: int) -> list:
+    """Principal = melhor equilíbrio preço × tempo; alternativas = as mais baratas com conexão."""
+    pool, seen = [], set()
+    for o in sort_offers([o for o in offers if o["price"]["amount"] is not None], "price"):
+        sig = outbound_signature(o)
+        if sig not in seen:
+            seen.add(sig)
+            pool.append(o)
+    if not pool:
         return []
-    by_best, by_price, by_time = sort_offers(offers, "best"), sort_offers(offers, "price"), sort_offers(offers, "duration")
-    picks, seen = [], set()
-
-    def add(offer, role):
-        if offer["id"] not in seen and len(picks) < count:
-            seen.add(offer["id"])
-            picks.append((offer, role))
-
-    add(by_best[0], "recommended")
-    add(by_price[0], "cheapest")
-    add(by_time[0], "fastest")
-    for o in by_best:
-        add(o, "alternative")
-    return picks
+    main = sort_offers(pool, "best")[0]
+    connecting = [o for o in pool if o is not main and o["slices"][0]["stops"] > 0]
+    others = [o for o in pool if o is not main and o not in connecting]
+    return [main] + (connecting + others)[:extra]
 
 
-def option_reason(offer: dict, role: str, cheapest: dict, recommended: dict, currency: str) -> str:
-    s = offer["slices"][0]
-    diff = offer["price"]["amount"] - cheapest["price"]["amount"]
-    stops = "voo direto" if s["stops"] == 0 else f"{s['stops']} conexão em {city_of(s['segments'][0]['to'])}" if s["stops"] == 1 else f"{s['stops']} conexões"
-    dur = fmt_minutes(s["duration_minutes"])
-    if role == "recommended":
-        if diff <= 0:
-            return f"A menor tarifa encontrada, em {stops} de {dur}. Equilíbrio raro entre preço e conforto."
-        return f"{stops.capitalize()} de {dur}, por apenas {money_q(diff, currency)} a mais que a tarifa mais baixa. É a nossa escolha."
-    if role == "cheapest":
-        extra = (offer["total_duration_minutes"] or 0) - (recommended["total_duration_minutes"] or 0)
-        longer = f", {fmt_minutes(extra)} a mais de viagem que a recomendação" if extra > 0 else ""
-        return f"A tarifa mais baixa da pesquisa, com {stops}{longer}."
-    if role == "fastest":
-        return f"O trajeto mais curto: {stops} de {dur}."
-    dep = local_hhmm(s["departure"])
-    other = "outro horário" if set(offer["airlines"]) & set(recommended["airlines"]) else "outro horário ou companhia"
-    return f"Alternativa com {stops} e partida às {dep}, para quem prefere {other}."
-
-
-def render_leg(s: dict) -> str:
-    dep, arr = local_hhmm(s["departure"]) or "--:--", local_hhmm(s["arrival"]) or "--:--"
+def render_slice(label: str, s: dict) -> str:
+    """Uma linha por trecho: horários nas pontas, barra proporcional (voo escuro, conexão clara)
+    e, abaixo, cada voo e cada conexão por extenso."""
     try:
         plus = (parse_local(s["arrival"]).date() - parse_local(s["departure"]).date()).days
     except (TypeError, ValueError):
         plus = 0
-    stops_html = ""
-    for i, seg in enumerate(s["segments"][:-1], 1):
-        pos = 100 * i / len(s["segments"])
-        stops_html += f'<span class="stop" style="left:{pos:.1f}%"></span><span class="stop-label" style="left:{pos:.1f}%">{esc(seg["to"])}</span>'
+    bar, legs = [], []
+    layovers = s.get("layovers") or []
+    for i, seg in enumerate(s["segments"]):
+        bar.append(f'<i class="f" style="flex-grow:{seg.get("duration_minutes") or 60}"></i>')
+        legs.append(
+            f'<span class="leg"><b>{esc(seg.get("flight_number"))}</b> {esc(seg.get("from"))} {esc(local_hhmm(seg.get("departure")))}'
+            f' → {esc(seg.get("to"))} {esc(local_hhmm(seg.get("arrival")))} · {esc(fmt_minutes(seg.get("duration_minutes")))}</span>'
+        )
+        if i < len(layovers):
+            lay = layovers[i]
+            bar.append(f'<i class="w" style="flex-grow:{max(lay.get("duration_minutes") or 20, 20)}"></i>')
+            flag = " · troca de aeroporto" if lay.get("change_airport") else (" · pernoite" if lay.get("overnight") else "")
+            legs.append(f'<span class="lay">Conexão em {esc(city_of(lay.get("airport")))} <b>{esc(fmt_minutes(lay.get("duration_minutes")))}</b>{esc(flag)}</span>')
+    stops = "Direto" if s["stops"] == 0 else f'{s["stops"]} {"conexão" if s["stops"] == 1 else "conexões"}'
     return f"""
-      <div class="path">
-        <div class="end"><span class="time">{esc(dep)}</span><span class="code">{esc(s["origin"])}</span></div>
-        <div class="track" aria-label="{esc(fmt_minutes(s['duration_minutes']))}, {s['stops']} parada(s)">
-          <span class="track-dur">{esc(fmt_minutes(s["duration_minutes"]))}</span>{stops_html}
+      <div class="slice">
+        <div class="when"><b>{esc(label)}</b><span>{esc(date_pt(s["departure"]))}</span></div>
+        <div class="route-line">
+          <div class="ends"><span><b>{esc(local_hhmm(s["departure"]))}</b> {esc(s["origin"])}</span><span><b>{esc(local_hhmm(s["arrival"]))}</b>{f"<sup>+{plus}</sup>" if plus > 0 else ""} {esc(s["destination"])}</span></div>
+          <div class="bar">{"".join(bar)}</div>
+          <div class="legs">{"".join(legs)}</div>
         </div>
-        <div class="end arr"><span class="time">{esc(arr)}{f"<sup>+{plus}</sup>" if plus > 0 else ""}</span><span class="code">{esc(s["destination"])}</span></div>
+        <div class="total"><b>{esc(fmt_minutes(s["duration_minutes"]))}</b><span>{esc(stops)}</span></div>
       </div>"""
 
 
-def render_option(index: int, offer: dict, role: str, reason: str, seats: int) -> str:
-    labels = {"recommended": "Recomendação da casa", "cheapest": "A mais econômica", "fastest": "A mais rápida", "alternative": "Alternativa"}
-    s = offer["slices"][0]
-    amount, currency = offer["price"]["amount"], offer["price"]["currency"]
-    per = f'<div class="per">{esc(money_q(amount / seats, currency))} por pessoa</div>' if seats > 1 else ""
-    stops = "Direto" if s["stops"] == 0 else f"{s['stops']} conexão em {city_of(s['segments'][0]['to'])}" if s["stops"] == 1 else f"{s['stops']} conexões"
-    flights = " · ".join(seg["flight_number"] for seg in s["segments"] if seg.get("flight_number"))
-    aircraft = next((seg["aircraft"] for seg in s["segments"] if seg.get("aircraft")), None)
-    comfort = amenities_pt(s["segments"][0])[:2]
-    facts = [f"<span><b>{esc(stops)}</b></span>", f'<span class="mono">{esc(flights)}</span>']
-    if aircraft:
-        facts.append(f"<span>{esc(aircraft)}</span>")
-    facts += [f"<span>{esc(c)}</span>" for c in comfort]
-    ret = (offer.get("search_dates") or {}).get("return")
-    return_line = (f'<div class="return-line"><b>Volta</b> · {esc(date_pt(ret))} · voos e horários escolhidos com você na emissão</div>'
-                   if ret else "")
+def render_card(rank: int, o: dict, tags: list, seats: int) -> str:
+    amount, currency = o["price"]["amount"], o["price"]["currency"]
+    per = f'<span class="per">{esc(money_short(amount / seats, currency))} por pessoa</span>' if seats > 1 else ""
+    tag_html = "".join(f'<span class="tag {esc(cls)}">{esc(text)}</span>' for text, cls in tags)
+    slices = o["slices"]
+    rows = render_slice("Ida", slices[0])
+    if len(slices) > 1:
+        rows += render_slice("Volta", slices[1])
+    elif o.get("return_missing"):
+        rows += '<div class="slice note">Volta: detalhes indisponíveis nesta consulta; confira no link.</div>'
+    link = o.get("validation_url") or (o.get("booking") or {}).get("google_flights_url")
+    link_html = f'<a class="gf" href="{esc(link)}" target="_blank" rel="noopener">Validar no Google Flights&nbsp;↗</a>' if link else ""
     return f"""
-    <article class="option{' featured' if role == 'recommended' else ''}">
-      <div class="option-head">
-        <div class="numeral">{ROMAN[index]}</div>
-        <div class="option-title"><span class="eyebrow">{esc(labels[role])}</span><h3>{esc(' & '.join(a for a in offer['airlines'] if a))}</h3></div>
-        <div class="price"><div class="amount"><small>{esc(CURRENCY_SYMBOL.get(currency, currency))}</small>{esc(money(amount, currency).split(' ', 1)[1])}</div>{per}</div>
-      </div>
-      <p class="why">{esc(reason)}</p>
-      <div class="leg">
-        <div class="leg-label"><span class="eyebrow">Ida · {esc(date_pt(s['departure']))}</span></div>
-        {render_leg(s)}
-        <div class="facts">{''.join(facts)}</div>
-      </div>
-      {return_line}
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">{rank}</span>
+        <div class="price"><b>{esc(money_q(amount, currency))}</b>{per}</div>
+        <div class="who"><span class="air">{esc(" · ".join(a for a in o["airlines"] if a))}</span>{tag_html}</div>
+        {link_html}
+      </header>
+      {rows}
     </article>"""
-
-
-def render_market(insights: dict | None, price: float, currency: str) -> str:
-    if not insights or not insights.get("typical_range") or len(insights["typical_range"]) != 2:
-        return ""
-    lo, hi = insights["typical_range"]
-    level = insights.get("level")
-    reading = {
-        "low": ("abaixo do usual", "É um momento favorável para emitir."),
-        "typical": ("dentro da faixa típica", "Não há sinal de queda iminente; sugerimos decidir dentro da validade desta proposta."),
-        "high": ("acima do usual", "Se houver flexibilidade de datas, podemos acompanhar a tarifa e avisar quando baixar."),
-    }.get(level, ("sem referência suficiente", ""))
-    start, end = min(lo, price) * 0.85, max(hi, price) * 1.08
-
-    def pos(v):
-        return 100 * (v - start) / (end - start)
-
-    return f"""
-  <section class="market">
-    <div class="eyebrow">Leitura de mercado</div>
-    <div>
-      <p>Pelo histórico do Google Flights para esta rota e estas datas, a tarifa recomendada está <b>{esc(reading[0])}</b>, que vai de {esc(money_q(lo, currency))} a {esc(money_q(hi, currency))}. {esc(reading[1])}</p>
-      <div class="scale" role="img" aria-label="Faixa típica de {esc(money_q(lo, currency))} a {esc(money_q(hi, currency))}; tarifa recomendada {esc(money_q(price, currency))}">
-        <div class="base"></div>
-        <div class="band" style="left:{pos(lo):.1f}%;width:{pos(hi) - pos(lo):.1f}%"></div>
-        <span class="tick" style="left:{pos(lo):.1f}%">{esc(money_q(lo, currency))}</span>
-        <span class="tick" style="left:{pos(hi):.1f}%">{esc(money_q(hi, currency))}</span>
-        <span class="band-label" style="left:{(pos(lo) + pos(hi)) / 2:.1f}%">faixa típica</span>
-        <div class="marker" style="left:{pos(price):.1f}%"><span>Nossa recomendação</span><i></i></div>
-      </div>
-    </div>
-  </section>"""
 
 
 def find_browser() -> str | None:
@@ -832,84 +821,98 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         argv = [x for x in a.search_args if x != "--"]
         if not argv:
             raise FlightSearchError("Informe --from-json ou os argumentos de busca após '--'.", "invalid_request")
-        sargs = parse_search_argv(argv + ["--limit", "50"])
-        result = cmd_search(sargs)
+        result = cmd_search(parse_search_argv(argv + ["--limit", "60"]))
     q, offers = result["query"], result["offers"]
     if not offers:
         raise FlightSearchError("A busca não trouxe ofertas para montar a cotação.", "no_results")
 
-    picks = pick_options(offers, max(1, min(a.options, len(ROMAN))))
-    recommended = picks[0][0]
-    cheapest = sort_offers(offers, "price")[0]
-    currency = recommended["price"]["currency"]
-    seats = q["adults"] + len(q.get("children_ages") or [])
-    options_html = "".join(
-        render_option(i, o, role, option_reason(o, role, cheapest, recommended, currency), seats)
-        for i, (o, role) in enumerate(picks)
-    )
+    chosen = [json.loads(json.dumps(o)) for o in select_options(offers, max(2, min(a.extra, 3)))]
+    for o in chosen:  # recalcula conexões (cobre JSON de versões anteriores)
+        o["slices"] = [build_slice(s["segments"], s["duration_minutes"]) for s in o["slices"]]
+    main_id = chosen[0]["id"]
+    return_lookups = 0
+    if q.get("return") and not a.no_return:
+        for o in chosen:
+            token = (o.get("booking") or {}).get("departure_token")
+            if o["provider"] != "serpapi" or not token:
+                continue
+            try:
+                back = serpapi_return(q, token)
+                return_lookups += 1
+            except FlightSearchError:
+                back = None
+            if back:
+                o["slices"] = [o["slices"][0], back["slice"]]
+                o["price"]["amount"] = back["price"]
+                o["airlines"] = list(dict.fromkeys(o["airlines"] + back["airlines"]))
+                o["total_duration_minutes"] = sum_durations(o["slices"])
+                o["validation_url"] = back["url"]
+            else:
+                o["return_missing"] = True
+    chosen.sort(key=lambda o: (o["price"]["amount"], o["total_duration_minutes"] or 0))
 
-    brand = a.brand or os.environ.get("FLIGHTS_BRAND_NAME") or "Private Travel Office"
-    words = [w for w in re.split(r"\s+", brand) if w]
-    monogram = "".join(w[0] for w in words[:2]).upper() if len(words) > 1 else brand[:2].upper()
+    currency = chosen[0]["price"]["currency"]
+    seats = q["adults"] + len(q.get("children_ages") or [])
+    fastest = min(chosen, key=lambda o: o["total_duration_minutes"] or 10**9)
+    cards, options_out = [], []
+    for rank, o in enumerate(chosen, 1):
+        tags = []
+        if rank == 1:
+            tags.append(("Mais em conta", "accent"))
+        if o["id"] == main_id:
+            tags.append(("Recomendada", "dark"))
+        if o is fastest and len(chosen) > 1:
+            tags.append(("Mais rápida", ""))
+        cards.append(render_card(rank, o, tags, seats))
+        options_out.append({
+            "rank": rank, "price": o["price"], "airlines": o["airlines"], "tags": [t for t, _ in tags],
+            "total_duration_minutes": o["total_duration_minutes"],
+            "slices": [{"from": s["origin"], "to": s["destination"], "departure": s["departure"], "duration_minutes": s["duration_minutes"],
+                        "flights": [seg["flight_number"] for seg in s["segments"]],
+                        "layovers": [{"airport": l["airport"], "minutes": l["duration_minutes"]} for l in s.get("layovers") or []]}
+                       for s in o["slices"]],
+            "validation_url": o.get("validation_url") or (o.get("booking") or {}).get("google_flights_url"),
+        })
+
+    brand = a.brand or os.environ.get("FLIGHTS_BRAND_NAME") or "Argos Core"
     now = dt.datetime.now()
     valid = now + dt.timedelta(hours=a.valid_hours)
-    reference = f"FS-{now:%Y%m%d}-{q['origin']}{q['destination']}-{secrets.token_hex(2).upper()}"
-    client = a.client or "Cliente"
-    first_name = client.split()[0]
+    o_code, d_code = q["origin"].split(",")[0], q["destination"].split(",")[0]
+    reference = f"AC-{now:%y%m%d}-{o_code}{d_code}-{secrets.token_hex(2).upper()}"
     pax = [f"{q['adults']} adulto{'s' if q['adults'] > 1 else ''}"]
     if q.get("children_ages"):
         pax.append(f"{len(q['children_ages'])} criança{'s' if len(q['children_ages']) > 1 else ''}")
     if q.get("infants"):
         pax.append(f"{q['infants']} bebê{'s' if q['infants'] > 1 else ''}")
-    pax_line = ", ".join(pax)
-    dates_line = date_pt(q["depart"]) + (f" — {date_pt(q['return'])}" if q.get("return") else "")
-    trip_kind = "Ida e volta" if q.get("return") else "Somente ida"
-    if q.get("provider") == "mock":
-        trip_kind = "Amostra com dados fictícios · " + trip_kind
+    dates = date_pt(q["depart"]) + (f" – {date_pt(q['return'])}" if q.get("return") else "")
+    meta = [q["origin"].replace(",", "/") + " → " + q["destination"].replace(",", "/"), dates + f" {q['depart'][:4]}",
+            ", ".join(pax), CABIN_PT.get(q["cabin"], q["cabin"]), "Ida e volta" if q.get("return") else "Só ida"]
 
-    if a.note:
-        paragraphs = [p.strip() for p in a.note.split("\n") if p.strip()]
-    else:
-        paragraphs = [
-            f"Analisamos {result['count']} tarifas entre {city_of(q['origin'])} e {city_of(q['destination'])} para {dates_line.replace(' — ', ' a ')} "
-            f"e reunimos aqui as que valem a sua atenção.",
-            "A primeira é a nossa recomendação; as demais estão aqui para que a decisão seja sua, com tudo à vista.",
-        ]
-    note_html = "".join(f"<p>{esc(p)}</p>" for p in paragraphs)
+    pi = result.get("price_insights") or {}
+    rng = pi.get("typical_range") or []
+    level = {"low": "abaixo do típico", "typical": "dentro do típico", "high": "acima do típico"}.get(pi.get("level"), "")
+    stats = [("A partir de", money_short(chosen[0]["price"]["amount"], currency), f"{len(chosen)} opções de {result['count']} analisadas"),
+             ("Mais rápida", fmt_minutes(fastest["total_duration_minutes"]), "em voo e conexões, ida" + (" e volta" if q.get("return") else ""))]
+    if len(rng) == 2:
+        stats.append(("Faixa típica · Google", f"{money_short(rng[0], currency)}–{money_short(rng[1], currency).split(' ', 1)[1]}", f"Preço atual {level}" if level else ""))
+    summary_html = "".join(f'<div class="stat"><span>{esc(k)}</span><b>{esc(v)}</b><small>{esc(n)}</small></div>' for k, v, n in stats)
 
-    contact = [x for x in (a.email or os.environ.get("FLIGHTS_CONTACT_EMAIL"), a.phone or os.environ.get("FLIGHTS_CONTACT_PHONE"),
-                           os.environ.get("FLIGHTS_CONTACT_WEB")) if x]
-    return_term = ("<li>Em ida e volta, o valor corresponde à viagem completa. Os voos de volta são escolhidos e confirmados com você na emissão.</li>"
-                   if q.get("return") else "")
+    mock_note = "Amostra com dados fictícios. " if q.get("provider") == "mock" else ""
+    footnote = (f"{mock_note}Valores totais para {', '.join(pax)}, em {CURRENCY_SYMBOL.get(currency, currency)}, consultados no Google Flights em "
+                f"{now.day} {MONTHS[now.month - 1]} {now.year}, {now:%H:%M}. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. "
+                "Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.")
     values = {
-        "title": f"Proposta {q['origin']}–{q['destination']} · {client}",
+        "title": f"Cotação {o_code}–{d_code}",
         "brand": esc(brand),
-        "monogram": esc(monogram),
-        "tagline": esc(a.tagline or os.environ.get("FLIGHTS_BRAND_TAGLINE") or "Viagens sob medida"),
         "reference": esc(reference),
-        "issued": esc(f"{now.day} {MONTHS[now.month - 1]} {now.year}, {now:%H:%M}"),
-        "valid_until": esc(f"{valid.day} {MONTHS[valid.month - 1]} {valid.year}, {valid:%H:%M}"),
-        "trip_kind": esc(trip_kind),
-        "cabin": esc(CABIN_PT.get(q["cabin"], q["cabin"])),
-        "origin_city": esc(city_of(q["origin"])),
-        "destination_city": esc(city_of(q["destination"])),
-        "origin_code": esc(q["origin"]),
-        "destination_code": esc(q["destination"]),
-        "dates_line": esc(dates_line),
-        "passengers_line": esc(pax_line),
-        "passengers_short": esc(pax_line),
-        "client": esc(client),
-        "salutation": esc(f"{first_name},"),
-        "note_html": note_html,
-        "options_count": esc(len(picks)),
-        "offers_considered": esc(result["count"]),
-        "options_html": options_html,
-        "market_html": render_market(result.get("price_insights"), recommended["price"]["amount"], currency),
-        "currency_name": esc(CURRENCY_PT.get(currency, currency)),
-        "return_term": return_term,
-        "advisor": esc(a.advisor or os.environ.get("FLIGHTS_ADVISOR_NAME") or brand),
-        "advisor_title": esc(a.advisor_title or os.environ.get("FLIGHTS_ADVISOR_TITLE") or "Consultoria de viagens"),
-        "contact_html": "<br>".join(esc(c) for c in contact),
+        "issued": esc(f"{now.day} {MONTHS[now.month - 1]}, {now:%H:%M}"),
+        "valid_until": esc(f"{valid.day} {MONTHS[valid.month - 1]}, {valid:%H:%M}"),
+        "route_title": f"{esc(city_of(o_code))} <span>→</span> {esc(city_of(d_code))}",
+        "route_meta": " · ".join(esc(m) for m in meta),
+        "client_line": f'<p class="client">Para {esc(a.client)}</p>' if a.client else "",
+        "summary_html": summary_html,
+        "options_html": "".join(cards),
+        "footnote": esc(footnote),
     }
     template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "quote.html")
     with open(template_path, encoding="utf-8") as f:
@@ -921,11 +924,8 @@ def cmd_quote(a: argparse.Namespace) -> dict:
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(page)
-    response = {
-        "kind": "quote", "reference": reference, "html_path": os.path.abspath(out), "client": client,
-        "valid_until": valid.isoformat(timespec="minutes"),
-        "options": [{"label": ROMAN[i], "role": role, "airlines": o["airlines"], "price": o["price"], "offer_id": o["id"]} for i, (o, role) in enumerate(picks)],
-    }
+    response = {"kind": "quote", "reference": reference, "html_path": os.path.abspath(out), "client": a.client,
+                "valid_until": valid.isoformat(timespec="minutes"), "return_lookups": return_lookups, "options": options_out}
     if a.pdf:
         browser = find_browser()
         if not browser:
@@ -961,7 +961,8 @@ def describe_slice(s: dict) -> str:
         days = f"+{diff}" if diff > 0 else ""
     except (TypeError, ValueError):
         pass
-    stops = "direto" if s["stops"] == 0 else f"{s['stops']} parada(s) via {','.join(seg['to'] for seg in s['segments'][:-1])}"
+    stops = "direto" if s["stops"] == 0 else f"{s['stops']} parada(s): " + ", ".join(
+        f"{l['airport']} {fmt_minutes(l['duration_minutes'])}" for l in s.get("layovers") or [])
     flights = "/".join(seg["flight_number"] for seg in s["segments"] if seg.get("flight_number"))
     return f"{s['origin']}→{s['destination']} {(s['departure'] or '')[:10]} {dep}→{arr}{days} {fmt_minutes(s['duration_minutes'])} {stops} [{flights}]"
 
@@ -995,14 +996,20 @@ def watch_text(result: dict) -> str:
 
 def to_text(result: dict) -> str:
     if result.get("kind") == "quote":
-        lines = [f"Cotação {result['reference']} para {result['client']} (válida até {result['valid_until']})",
+        lines = [f"Cotação {result['reference']}" + (f" para {result['client']}" if result.get("client") else "") + f" (válida até {result['valid_until']})",
                  f"HTML: {result['html_path']}"]
         if result.get("pdf_path"):
             lines.append(f"PDF: {result['pdf_path']}")
         if result.get("pdf_error"):
             lines.append(f"PDF não gerado: {result['pdf_error']}")
         for o in result["options"]:
-            lines.append(f"  {o['label']}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(o['airlines'])} ({o['role']})")
+            legs = " || ".join(
+                f"{sl['from']}→{sl['to']} {fmt_minutes(sl['duration_minutes'])}"
+                + (" (conexões: " + ", ".join(f"{l['airport']} {fmt_minutes(l['minutes'])}" for l in sl["layovers"]) + ")" if sl["layovers"] else " direto")
+                for sl in o["slices"])
+            tags = f" [{', '.join(o['tags'])}]" if o["tags"] else ""
+            lines.append(f"  {o['rank']}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(o['airlines'])}{tags} | {legs}")
+            lines.append(f"     {o['validation_url']}")
         return "\n".join(lines)
     if result.get("kind", "").startswith("watch"):
         return watch_text(result)
@@ -1040,8 +1047,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     s = sub.add_parser("search", help="Buscar ofertas de voo")
-    s.add_argument("--from", dest="origin", required=True, help="IATA de origem (ex.: GRU)")
-    s.add_argument("--to", dest="destination", required=True, help="IATA de destino (ex.: LIS)")
+    s.add_argument("--from", dest="origin", required=True, help="IATA de origem (ex.: GRU ou GRU,VCP)")
+    s.add_argument("--to", dest="destination", required=True, help="IATA de destino (ex.: LIS ou LIS,OPO)")
+    s.add_argument("--nearby", action="store_true", help="Incluir aeroportos da mesma cidade (ex.: GRU → GRU,CGH,VCP)")
     s.add_argument("--depart", required=True, help="Data de ida AAAA-MM-DD")
     s.add_argument("--return", dest="return_date", help="Data de volta AAAA-MM-DD (omitir = só ida)")
     s.add_argument("--adults", type=int, default=1)
@@ -1086,18 +1094,13 @@ def build_parser() -> argparse.ArgumentParser:
     wc.add_argument("--id", dest="watch_id")
     wc.set_defaults(func=cmd_watch_check)
 
-    qt = sub.add_parser("quote", help="Gerar cotação em HTML (e PDF) para o cliente")
-    qt.add_argument("--from-json", help="Saída JSON de um 'search' já feito (não gasta nova busca)")
-    qt.add_argument("--client", help="Nome do cliente")
-    qt.add_argument("--note", help="Texto da carta ao cliente (parágrafos separados por quebra de linha)")
-    qt.add_argument("--options", type=int, default=3, help="Quantas opções apresentar (1-5)")
-    qt.add_argument("--valid-hours", type=int, default=24, help="Validade da proposta em horas")
-    qt.add_argument("--brand", help="Nome da agência (ou FLIGHTS_BRAND_NAME)")
-    qt.add_argument("--tagline", help="Assinatura da marca (ou FLIGHTS_BRAND_TAGLINE)")
-    qt.add_argument("--advisor", help="Nome do consultor (ou FLIGHTS_ADVISOR_NAME)")
-    qt.add_argument("--advisor-title", help="Cargo do consultor (ou FLIGHTS_ADVISOR_TITLE)")
-    qt.add_argument("--email", help="Contato (ou FLIGHTS_CONTACT_EMAIL)")
-    qt.add_argument("--phone", help="Telefone (ou FLIGHTS_CONTACT_PHONE)")
+    qt = sub.add_parser("quote", help="Gerar cotação de uma página em HTML (e PDF)")
+    qt.add_argument("--from-json", help="Saída JSON de um 'search' já feito")
+    qt.add_argument("--client", help="Nome do cliente (opcional)")
+    qt.add_argument("--extra", type=int, default=3, help="Alternativas com conexão além da principal (2 ou 3)")
+    qt.add_argument("--no-return", action="store_true", help="Não buscar os voos de volta (economiza 1 busca por opção)")
+    qt.add_argument("--valid-hours", type=int, default=24, help="Validade da cotação em horas")
+    qt.add_argument("--brand", help="Marca exibida (padrão: FLIGHTS_BRAND_NAME ou Argos Core)")
     qt.add_argument("--output", help="Caminho do HTML (padrão: pasta de estado/quotes)")
     qt.add_argument("--pdf", action="store_true", help="Gerar PDF também (requer Chrome/Chromium)")
     qt.add_argument("search_args", nargs=argparse.REMAINDER, help="Argumentos do 'search' após '--' (se não usar --from-json)")
