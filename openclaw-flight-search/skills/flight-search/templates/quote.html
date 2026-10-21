@@ -33,8 +33,7 @@ body {
 .label { font-size: 9.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
 
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.logo { height: 17px; width: auto; display: block; }
-.brand-text { font-weight: 700; font-size: 19px; letter-spacing: -.03em; line-height: 1; }
+.top .label.brand { color: var(--ink); font-weight: 700; }
 .top .label { color: var(--muted); font-weight: 600; }
 
 .hero { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 1.5px solid var(--ink); }
@@ -89,7 +88,6 @@ body {
 
 .note-text { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.55; max-width: 100ch; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
-.foot .logo { height: 13px; }
 .foot .label { color: var(--muted); font-weight: 600; }
 
 @media (max-width: 620px) {
@@ -135,8 +133,8 @@ body {
 <body style="--print-zoom: {{print_zoom}}">
 <main class="page">
   <div class="top">
-    {{logo_html}}
-    <span class="label">{{brand}} · Cotação de voos</span>
+    <span class="label brand">{{brand}}</span>
+    <span class="label">Cotação de voos</span>
   </div>
 
   <section class="hero">
@@ -155,8 +153,8 @@ body {
 
   <p class="note-text">{{footnote}}</p>
   <footer class="foot">
-    {{logo_small_html}}
-    <span class="label">{{brand}} · Cotação {{reference}} · Válida até {{valid_until}}</span>
+    <span class="label">{{brand}}</span>
+    <span class="label">Cotação {{reference}} · Válida até {{valid_until}}</span>
   </footer>
 </main>
 </body>

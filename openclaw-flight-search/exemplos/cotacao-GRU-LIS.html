@@ -33,8 +33,7 @@ body {
 .label { font-size: 9.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
 
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.logo { height: 17px; width: auto; display: block; }
-.brand-text { font-weight: 700; font-size: 19px; letter-spacing: -.03em; line-height: 1; }
+.top .label.brand { color: var(--ink); font-weight: 700; }
 .top .label { color: var(--muted); font-weight: 600; }
 
 .hero { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 1.5px solid var(--ink); }
@@ -89,7 +88,6 @@ body {
 
 .note-text { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.55; max-width: 100ch; }
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
-.foot .logo { height: 13px; }
 .foot .label { color: var(--muted); font-weight: 600; }
 
 @media (max-width: 620px) {
@@ -135,8 +133,8 @@ body {
 <body style="--print-zoom: 1.00">
 <main class="page">
   <div class="top">
-    <span class="brand-text">tax.co</span>
-    <span class="label">Argos Core · Cotação de voos</span>
+    <span class="label brand">Argos Core</span>
+    <span class="label">Cotação de voos</span>
   </div>
 
   <section class="hero">
@@ -261,10 +259,10 @@ body {
     </article>
   </section>
 
-  <p class="note-text">Valores totais para 2 adultos, em R$, consultados no Google Flights em 21 out 2026, 10:03. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.</p>
+  <p class="note-text">Valores totais para 2 adultos, em R$, consultados no Google Flights em 21 out 2026, 10:24. Tarifas mudam sem aviso: valide cada opção no link antes de emitir. Horários locais; +1 indica chegada no dia seguinte. Bagagem e regras de alteração dependem da tarifa.</p>
   <footer class="foot">
-    <span class="brand-text">tax.co</span>
-    <span class="label">Argos Core · Cotação AC-261021-GRULIS-82A7 · Válida até 22 out, 10:03</span>
+    <span class="label">Argos Core</span>
+    <span class="label">Cotação AC-261021-GRULIS-17E5 · Válida até 22 out, 10:24</span>
   </footer>
 </main>
 </body>

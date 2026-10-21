@@ -250,21 +250,12 @@ class TestQuote(Base):
     def test_quote_brand(self):
         src = self.make_search()
         out = os.path.join(self.tmp.name, "marca.html")
-        logo = os.path.join(self.tmp.name, "logo.png")
-        with open(logo, "wb") as f:  # PNG 1x1 transparente
-            f.write(bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
-                                  "1f15c4890000000d49444154789c63000100000500010d0a2db40000000049454e44ae426082"))
-        for value, expected in ((logo, '<img class="logo" src="data:image/png;base64,'),
-                                ("none", '<span class="brand-text">tax.co</span>')):
-            os.environ["FLIGHTS_BRAND_LOGO"] = value
-            try:
-                run("quote", "--from-json", src, "--output", out)
-            finally:
-                del os.environ["FLIGHTS_BRAND_LOGO"]
-            with open(out, encoding="utf-8") as f:
-                page = f.read()
-            self.assertIn(expected, page)
-            self.assertIn("Hanken Grotesk", page)
+        run("quote", "--from-json", src, "--output", out)
+        with open(out, encoding="utf-8") as f:
+            page = f.read()
+        self.assertNotIn("<img", page)                      # sem logo
+        self.assertIn('<span class="label brand">Argos Core</span>', page)
+        self.assertIn("Hanken Grotesk", page)
 
     def test_quote_needs_input(self):
         self.assertEqual(run("quote")[1]["error"]["code"], "invalid_request")

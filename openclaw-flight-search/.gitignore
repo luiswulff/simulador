@@ -1,6 +1,3 @@
 __pycache__/
 .env
 *.zip
-
-# Logo oficial: adicionado localmente (ver README)
-skills/flight-search/assets/taxco-logo.png

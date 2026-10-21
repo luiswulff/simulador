@@ -891,20 +891,6 @@ def cmd_quote(a: argparse.Namespace) -> dict:
     if q.get("provider") == "mock":
         trip_label = "Amostra com dados fictícios · " + trip_label
 
-    # logo: FLIGHTS_BRAND_LOGO (caminho ou "none") ou o logo tax.co que acompanha a skill;
-    # sem arquivo, cai na marca escrita
-    wordmark = os.environ.get("FLIGHTS_BRAND_WORDMARK") or "tax.co"
-    logo_html = logo_small_html = f'<span class="brand-text">{esc(wordmark)}</span>'
-    logo_path = os.environ.get("FLIGHTS_BRAND_LOGO") or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "taxco-logo.png")
-    if logo_path.lower() != "none" and os.path.isfile(logo_path):
-        import base64
-        import mimetypes
-        mime = mimetypes.guess_type(logo_path)[0] or "image/png"
-        with open(logo_path, "rb") as f:
-            src = f"data:{mime};base64," + base64.b64encode(f.read()).decode()
-        logo_html = logo_small_html = f'<img class="logo" src="{src}" alt="{esc(wordmark)}">'
-
     pi = result.get("price_insights") or {}
     rng = pi.get("typical_range") or []
     level = {"low": "abaixo do típico", "typical": "dentro do típico", "high": "acima do típico"}.get(pi.get("level"), "")
@@ -930,8 +916,6 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         "trip_label": esc(trip_label),
         # cada voo/conexão é uma linha; acima de ~22 linhas a impressão reduz a escala para caber em uma página
         "print_zoom": f"{min(1.0, max(0.78, 22 / max(1, sum(len(sl['segments']) * 2 - 1 for o in chosen for sl in o['slices'])))):.2f}",
-        "logo_html": logo_html,
-        "logo_small_html": logo_small_html,
         "summary_html": summary_html,
         "options_html": "".join(cards),
         "footnote": esc(footnote),
