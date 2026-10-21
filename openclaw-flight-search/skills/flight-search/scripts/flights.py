@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Pesquisa de voos para agentes autônomos (skill do OpenClaw).
 
-Somente biblioteca padrão. Provedores: duffel, serpapi (Google Flights) e mock.
+Somente biblioteca padrão. Provedores: serpapi (Google Flights) e mock (dados fictícios).
+A chave pode vir do ambiente (SERPAPI_API_KEY) ou do arquivo .env na pasta da skill.
 Saída: JSON normalizado (padrão) ou texto compacto (--format text).
 
 Exemplos:
@@ -28,7 +29,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.2.0"
+VERSION = "2.0.0"
 USER_AGENT = f"openclaw-flight-search/{VERSION}"
 HTTP_TIMEOUT = 45
 MAX_FLEX_DAYS = 3
@@ -43,17 +44,6 @@ class FlightSearchError(Exception):
 
 # ---------------------------------------------------------------------------
 # Utilitários
-
-
-def iso_duration_minutes(value: str | None) -> int | None:
-    """Converte duração ISO 8601 (ex.: P1DT2H30M) em minutos."""
-    if not value:
-        return None
-    m = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:\d+S)?)?", value)
-    if not m:
-        return None
-    days, hours, minutes = (int(g) if g else 0 for g in m.groups())
-    return days * 1440 + hours * 60 + minutes
 
 
 def minutes_between(start: str, end: str) -> int | None:
@@ -160,74 +150,15 @@ def cache_put(key: str, entry: dict) -> None:
 # Provedores. Cada um recebe a consulta normalizada e devolve (ofertas, price_insights|None).
 # Ofertas normalizadas:
 # {id, provider, price:{amount,currency}, airlines[], slices[{origin,destination,
-#  departure,arrival,duration_minutes,stops,segments[]}], total_duration_minutes,
-#  checked_bags, refundable, changeable, booking{}}
+#  departure,arrival,duration_minutes,stops,segments[]}], total_duration_minutes, booking{}}
 
 CABIN_SERPAPI = {"economy": 1, "premium_economy": 2, "business": 3, "first": 4}
-
-
-def search_duffel(q: dict) -> list:
-    token = os.environ.get("DUFFEL_ACCESS_TOKEN")
-    if not token:
-        raise FlightSearchError("Defina DUFFEL_ACCESS_TOKEN para usar o provedor duffel.", "missing_credentials")
-    slices = [{"origin": q["origin"], "destination": q["destination"], "departure_date": q["depart"]}]
-    if q.get("return"):
-        slices.append({"origin": q["destination"], "destination": q["origin"], "departure_date": q["return"]})
-    passengers = [{"type": "adult"} for _ in range(q["adults"])]
-    passengers += [{"age": age} for age in q["children_ages"]]
-    passengers += [{"type": "infant_without_seat"} for _ in range(q["infants"])]
-    data = {"slices": slices, "passengers": passengers, "cabin_class": q["cabin"]}
-    if q.get("max_stops") is not None:
-        data["max_connections"] = q["max_stops"]
-    url = "https://api.duffel.com/air/offer_requests?return_offers=true&supplier_timeout=20000"
-    resp = http_json("POST", url, {"Authorization": f"Bearer {token}", "Duffel-Version": "v2"}, {"data": data})
-    return [normalize_duffel(o) for o in resp.get("data", {}).get("offers", [])], None
-
-
-def normalize_duffel(offer: dict) -> dict:
-    slices, airlines, bags = [], [], None
-    for s in offer.get("slices", []):
-        segments = []
-        for seg in s.get("segments", []):
-            carrier = seg.get("marketing_carrier") or {}
-            code = carrier.get("iata_code") or ""
-            if carrier.get("name") and carrier["name"] not in airlines:
-                airlines.append(carrier["name"])
-            if bags is None:
-                for p in seg.get("passengers", [])[:1]:
-                    bags = sum(b.get("quantity", 0) for b in p.get("baggages", []) if b.get("type") == "checked")
-            segments.append({
-                "from": (seg.get("origin") or {}).get("iata_code"),
-                "to": (seg.get("destination") or {}).get("iata_code"),
-                "departure": seg.get("departing_at"),
-                "arrival": seg.get("arriving_at"),
-                "carrier": code,
-                "carrier_name": carrier.get("name"),
-                "flight_number": f"{code}{seg.get('marketing_carrier_flight_number') or ''}",
-                "operating_carrier": (seg.get("operating_carrier") or {}).get("name"),
-                "aircraft": (seg.get("aircraft") or {}).get("name"),
-                "duration_minutes": iso_duration_minutes(seg.get("duration")),
-            })
-        slices.append(build_slice(segments, iso_duration_minutes(s.get("duration"))))
-    conditions = offer.get("conditions") or {}
-    return {
-        "id": offer.get("id"),
-        "provider": "duffel",
-        "price": {"amount": float(offer.get("total_amount", 0)), "currency": offer.get("total_currency")},
-        "airlines": airlines or [(offer.get("owner") or {}).get("name")],
-        "slices": slices,
-        "total_duration_minutes": sum_durations(slices),
-        "checked_bags": bags,
-        "refundable": bool((conditions.get("refund_before_departure") or {}).get("allowed")),
-        "changeable": bool((conditions.get("change_before_departure") or {}).get("allowed")),
-        "booking": {"offer_id": offer.get("id"), "expires_at": offer.get("expires_at"), "how": "Duffel Orders API (requer aprovação humana)"},
-    }
 
 
 def search_serpapi(q: dict) -> list:
     key = os.environ.get("SERPAPI_API_KEY")
     if not key:
-        raise FlightSearchError("Defina SERPAPI_API_KEY para usar o provedor serpapi.", "missing_credentials")
+        raise FlightSearchError("SERPAPI_API_KEY não configurada (ambiente ou arquivo .env da skill).", "missing_credentials")
     params = {
         "engine": "google_flights",
         "departure_id": q["origin"],
@@ -290,9 +221,6 @@ def normalize_serpapi(item: dict, q: dict, url: str | None, index: int) -> dict:
         "airlines": airlines,
         "slices": [outbound],
         "total_duration_minutes": outbound["duration_minutes"],
-        "checked_bags": None,
-        "refundable": None,
-        "changeable": None,
         "booking": {"google_flights_url": url, "booking_token": item.get("booking_token"), "departure_token": item.get("departure_token")},
     }
     if q.get("return"):
@@ -336,13 +264,12 @@ def search_mock(q: dict) -> list:
             "id": f"mock-{q['depart']}-{i}", "provider": "mock",
             "price": {"amount": amount, "currency": q["currency"]},
             "airlines": [name], "slices": slices, "total_duration_minutes": sum_durations(slices),
-            "checked_bags": rng.choice([0, 1]), "refundable": rng.random() < 0.3, "changeable": rng.random() < 0.6,
             "booking": {"note": "dados fictícios"},
         })
     return offers, None
 
 
-PROVIDERS = {"duffel": search_duffel, "serpapi": search_serpapi, "mock": search_mock}
+PROVIDERS = {"serpapi": search_serpapi, "mock": search_mock}
 
 
 def build_slice(segments: list, duration: int | None) -> dict:
@@ -369,13 +296,11 @@ def default_provider() -> str:
     explicit = os.environ.get("FLIGHTS_PROVIDER")
     if explicit:
         return explicit
-    if os.environ.get("DUFFEL_ACCESS_TOKEN"):
-        return "duffel"
     if os.environ.get("SERPAPI_API_KEY"):
         return "serpapi"
     raise FlightSearchError(
-        "Nenhum provedor configurado. Defina DUFFEL_ACCESS_TOKEN ou SERPAPI_API_KEY "
-        "(ou use --provider mock para dados fictícios).",
+        "SERPAPI_API_KEY não configurada (ambiente ou arquivo .env da skill). "
+        "Use --provider mock só para testes com dados fictícios.",
         "missing_credentials",
     )
 
@@ -411,8 +336,6 @@ def apply_filters(offers: list, a: argparse.Namespace) -> list:
         if a.depart_after and dep and dep < a.depart_after:
             continue
         if a.depart_before and dep and dep > a.depart_before:
-            continue
-        if a.refundable and o["refundable"] is False:
             continue
         out.append(o)
     return out
@@ -578,20 +501,6 @@ def cmd_airports(a: argparse.Namespace) -> dict:
         if term == c.lower() or term in strip_accents(city) or term in strip_accents(name)
     ]
     matches.sort(key=lambda m: m["iata"].lower() != term)  # código exato primeiro
-    token = os.environ.get("DUFFEL_ACCESS_TOKEN")
-    if token and not a.offline and len(term) >= 2:
-        url = "https://api.duffel.com/places/suggestions?" + urllib.parse.urlencode({"query": a.query})
-        try:
-            resp = http_json("GET", url, {"Authorization": f"Bearer {token}", "Duffel-Version": "v2"}, retries=1)
-            seen = {m["iata"] for m in matches}
-            for p in resp.get("data", []):
-                code = p.get("iata_code")
-                if code and code not in seen:
-                    seen.add(code)
-                    matches.append({"iata": code, "city": p.get("city_name") or p.get("name"), "name": p.get("name"),
-                                    "country": p.get("iata_country_code"), "type": p.get("type"), "source": "duffel"})
-        except FlightSearchError:
-            pass
     return {"query": a.query, "count": len(matches), "airports": matches[:20]}
 
 
@@ -721,217 +630,6 @@ def cmd_watch_check(a: argparse.Namespace) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Reserva (Duffel). Desligada por padrão; fluxo em duas etapas com aprovação humana:
-#   book prepare  -> confere preço atual, guarda a reserva pendente e gera um código
-#   book confirm  -> só com o código que o usuário repetiu; aborta se o preço mudou
-
-BOOKINGS_FILE = "bookings.json"
-APPROVAL_TTL_MINUTES = 30
-PASSENGER_FIELDS = ("given_name", "family_name", "born_on", "gender", "title", "email", "phone_number")
-
-
-def duffel_headers() -> dict:
-    token = os.environ.get("DUFFEL_ACCESS_TOKEN")
-    if not token:
-        raise FlightSearchError("Defina DUFFEL_ACCESS_TOKEN para reservar.", "missing_credentials")
-    return {"Authorization": f"Bearer {token}", "Duffel-Version": "v2"}
-
-
-def booking_guard(amount: float | None = None) -> None:
-    if os.environ.get("FLIGHTS_BOOKING_ENABLED") != "1":
-        raise FlightSearchError("Reserva desativada. O dono do agente precisa definir FLIGHTS_BOOKING_ENABLED=1.", "booking_disabled")
-    token = os.environ.get("DUFFEL_ACCESS_TOKEN", "")
-    if token.startswith("duffel_live") and os.environ.get("FLIGHTS_ALLOW_LIVE_BOOKING") != "1":
-        raise FlightSearchError("Token de produção bloqueado para reserva. Defina FLIGHTS_ALLOW_LIVE_BOOKING=1 para emitir bilhetes reais.", "live_booking_blocked")
-    limit = os.environ.get("FLIGHTS_MAX_BOOKING_AMOUNT")
-    if amount is not None and limit:
-        try:
-            limit_value = float(limit)
-        except ValueError:
-            raise FlightSearchError(f"FLIGHTS_MAX_BOOKING_AMOUNT inválido: {limit}.", "invalid_request") from None
-        if amount > limit_value:
-            raise FlightSearchError(f"Valor {amount:.2f} acima do limite FLIGHTS_MAX_BOOKING_AMOUNT={limit}.", "over_limit")
-
-
-def validate_passenger(p: dict, index: int) -> dict:
-    missing = [f for f in PASSENGER_FIELDS if not str(p.get(f) or "").strip()]
-    if missing:
-        raise FlightSearchError(f"Passageiro {index + 1}: faltam {', '.join(missing)}.", "invalid_request")
-    clean = {f: str(p[f]).strip() for f in PASSENGER_FIELDS}
-    try:
-        dt.date.fromisoformat(clean["born_on"])
-    except ValueError:
-        raise FlightSearchError(f"Passageiro {index + 1}: born_on deve ser AAAA-MM-DD.", "invalid_request") from None
-    clean["gender"] = clean["gender"].lower()
-    clean["title"] = clean["title"].lower()
-    if clean["gender"] not in ("m", "f"):
-        raise FlightSearchError(f"Passageiro {index + 1}: gender deve ser 'm' ou 'f'.", "invalid_request")
-    if clean["title"] not in ("mr", "ms", "mrs", "miss", "dr"):
-        raise FlightSearchError(f"Passageiro {index + 1}: title deve ser mr, ms, mrs, miss ou dr.", "invalid_request")
-    if not re.fullmatch(r"\+\d{8,15}", clean["phone_number"]):
-        raise FlightSearchError(f"Passageiro {index + 1}: phone_number no formato internacional, ex.: +5511999998888.", "invalid_request")
-    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", clean["email"]):
-        raise FlightSearchError(f"Passageiro {index + 1}: e-mail inválido.", "invalid_request")
-    return clean
-
-
-def fetch_offer(offer_id: str) -> dict:
-    if not re.fullmatch(r"off_[A-Za-z0-9]+", offer_id or ""):
-        raise FlightSearchError("offer_id inválido (esperado off_...). Reserva só funciona com ofertas da Duffel.", "invalid_request")
-    resp = http_json("GET", f"https://api.duffel.com/air/offers/{offer_id}", duffel_headers())
-    return resp.get("data") or {}
-
-
-def cmd_book_prepare(a: argparse.Namespace) -> dict:
-    booking_guard()
-    try:
-        with open(a.passengers_file, encoding="utf-8") as f:
-            raw = json.load(f)
-    except (OSError, ValueError) as e:
-        raise FlightSearchError(f"Não consegui ler {a.passengers_file}: {e}", "invalid_request") from None
-    if not isinstance(raw, list) or not raw:
-        raise FlightSearchError("O arquivo de passageiros deve ser uma lista JSON.", "invalid_request")
-    passengers = [validate_passenger(p, i) for i, p in enumerate(raw)]
-
-    offer = fetch_offer(a.offer_id)
-    offer_pax = offer.get("passengers") or []
-    if len(offer_pax) != len(passengers):
-        raise FlightSearchError(
-            f"A oferta tem {len(offer_pax)} passageiro(s) e o arquivo tem {len(passengers)}. "
-            f"Ordem esperada: {[p.get('type') or ('child, ' + str(p.get('age')) + ' anos') for p in offer_pax]}.",
-            "invalid_request",
-        )
-    amount = float(offer["total_amount"])
-    booking_guard(amount)
-
-    adults = [i for i, p in enumerate(offer_pax) if p.get("type") == "adult"]
-    infants = [i for i, p in enumerate(offer_pax) if (p.get("type") or "").startswith("infant")]
-    payload_pax = []
-    for p, op in zip(passengers, offer_pax):
-        payload_pax.append({**p, "id": op["id"]})
-    for adult_idx, infant_idx in zip(adults, infants):
-        payload_pax[adult_idx]["infant_passenger_id"] = offer_pax[infant_idx]["id"]
-
-    expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=APPROVAL_TTL_MINUTES)
-    offer_exp = offer.get("expires_at")
-    if offer_exp:
-        try:
-            expires = min(expires, dt.datetime.fromisoformat(offer_exp.replace("Z", "+00:00")))
-        except ValueError:
-            pass
-    booking = {
-        "id": "bk_" + secrets.token_hex(4),
-        "status": "pending_approval",
-        "offer_id": offer["id"],
-        "amount": offer["total_amount"],
-        "currency": offer["total_currency"],
-        "passengers": payload_pax,
-        "approval_code": f"{secrets.randbelow(10**6):06d}",
-        "created_at": now_iso(),
-        "expires_at": expires.replace(microsecond=0).isoformat(),
-        "summary": normalize_duffel(offer),
-    }
-    bookings = load_state(BOOKINGS_FILE, [])
-    bookings.append(booking)
-    save_state(BOOKINGS_FILE, bookings)
-    return {
-        "kind": "booking_prepared",
-        "booking_id": booking["id"],
-        "approval_code": booking["approval_code"],
-        "expires_at": booking["expires_at"],
-        "price": {"amount": amount, "currency": booking["currency"]},
-        "passengers": [f"{p['given_name']} {p['family_name']}" for p in passengers],
-        "offer": booking["summary"],
-        "instructions": "Mostre o resumo ao usuário e peça que ele responda com o código de aprovação. "
-                        "Só execute 'book confirm' se o usuário repetir o código em uma mensagem própria.",
-    }
-
-
-def cmd_book_confirm(a: argparse.Namespace) -> dict:
-    booking_guard()
-    bookings = load_state(BOOKINGS_FILE, [])
-    booking = next((b for b in bookings if b["id"] == a.booking_id), None)
-    if not booking:
-        raise FlightSearchError(f"Reserva pendente não encontrada: {a.booking_id}.", "not_found")
-    if booking["status"] != "pending_approval":
-        raise FlightSearchError(f"Reserva {a.booking_id} está com status '{booking['status']}'.", "invalid_state")
-    if dt.datetime.now(dt.timezone.utc) > dt.datetime.fromisoformat(booking["expires_at"]):
-        booking["status"] = "expired"
-        save_state(BOOKINGS_FILE, bookings)
-        raise FlightSearchError("Aprovação expirada. Busque e prepare de novo.", "expired")
-    if not secrets.compare_digest(str(a.approval_code).strip(), booking["approval_code"]):
-        booking["failed_attempts"] = booking.get("failed_attempts", 0) + 1
-        if booking["failed_attempts"] >= 3:
-            booking["status"] = "cancelled"
-        save_state(BOOKINGS_FILE, bookings)
-        raise FlightSearchError("Código de aprovação incorreto.", "approval_mismatch")
-
-    offer = fetch_offer(booking["offer_id"])
-    if (offer.get("total_amount"), offer.get("total_currency")) != (booking["amount"], booking["currency"]):
-        booking["status"] = "price_changed"
-        save_state(BOOKINGS_FILE, bookings)
-        raise FlightSearchError(
-            f"Preço mudou de {booking['currency']} {booking['amount']} para {offer.get('total_currency')} {offer.get('total_amount')}. "
-            "Nada foi reservado; prepare novamente e peça nova aprovação.",
-            "price_changed",
-        )
-    booking_guard(float(booking["amount"]))
-
-    body = {"data": {
-        "type": "instant",
-        "selected_offers": [booking["offer_id"]],
-        "payments": [{"type": "balance", "currency": booking["currency"], "amount": booking["amount"]}],
-        "passengers": booking["passengers"],
-    }}
-    booking["status"] = "submitting"
-    save_state(BOOKINGS_FILE, bookings)
-    try:
-        # sem novas tentativas: repetir um POST de pedido pode emitir dois bilhetes
-        order = http_json("POST", "https://api.duffel.com/air/orders", duffel_headers(), body, retries=0).get("data") or {}
-    except FlightSearchError:
-        booking["status"] = "failed"
-        save_state(BOOKINGS_FILE, bookings)
-        raise
-    booking.update({
-        "status": "booked",
-        "order_id": order.get("id"),
-        "booking_reference": order.get("booking_reference"),
-        "booked_at": now_iso(),
-        # dados pessoais não ficam guardados depois da emissão
-        "passengers": [{"given_name": p["given_name"], "family_name": p["family_name"]} for p in booking["passengers"]],
-        "approval_code": None,
-    })
-    save_state(BOOKINGS_FILE, bookings)
-    return {
-        "kind": "booking_confirmed",
-        "booking_id": booking["id"],
-        "order_id": booking["order_id"],
-        "booking_reference": booking["booking_reference"],
-        "price": {"amount": float(booking["amount"]), "currency": booking["currency"]},
-        "passengers": [f"{p['given_name']} {p['family_name']}" for p in booking["passengers"]],
-        "test_mode": not os.environ.get("DUFFEL_ACCESS_TOKEN", "").startswith("duffel_live"),
-    }
-
-
-def cmd_book_cancel(a: argparse.Namespace) -> dict:
-    bookings = load_state(BOOKINGS_FILE, [])
-    booking = next((b for b in bookings if b["id"] == a.booking_id), None)
-    if not booking:
-        raise FlightSearchError(f"Reserva não encontrada: {a.booking_id}.", "not_found")
-    if booking["status"] != "pending_approval":
-        raise FlightSearchError(f"Só reservas pendentes podem ser descartadas aqui (status: {booking['status']}).", "invalid_state")
-    booking.update({"status": "cancelled", "passengers": [], "approval_code": None})
-    save_state(BOOKINGS_FILE, bookings)
-    return {"kind": "booking_cancelled", "booking_id": a.booking_id}
-
-
-def cmd_book_list(a: argparse.Namespace) -> dict:
-    bookings = load_state(BOOKINGS_FILE, [])
-    fields = ("id", "status", "offer_id", "amount", "currency", "created_at", "expires_at", "order_id", "booking_reference")
-    return {"kind": "booking_list", "bookings": [{k: b.get(k) for k in fields} for b in bookings]}
-
-
-# ---------------------------------------------------------------------------
 # Saída em texto compacto (economiza tokens do agente)
 
 
@@ -980,32 +678,9 @@ def watch_text(result: dict) -> str:
     return "\n".join(lines)
 
 
-def booking_text(result: dict) -> str:
-    kind = result["kind"]
-    if kind == "booking_prepared":
-        o = result["offer"]
-        return "\n".join([
-            f"Reserva {result['booking_id']} PENDENTE de aprovação (expira {result['expires_at']})",
-            f"Total: {money(result['price']['amount'], result['price']['currency'])} · {', '.join(a for a in o['airlines'] if a)}",
-            *(f"  {describe_slice(s)}" for s in o["slices"]),
-            f"Passageiros: {', '.join(result['passengers'])}",
-            f"Código de aprovação: {result['approval_code']}",
-            result["instructions"],
-        ])
-    if kind == "booking_confirmed":
-        mode = " (MODO TESTE — nenhum bilhete real)" if result["test_mode"] else ""
-        return (f"Reserva confirmada{mode}: localizador {result['booking_reference']} · pedido {result['order_id']} · "
-                f"{money(result['price']['amount'], result['price']['currency'])} · {', '.join(result['passengers'])}")
-    if kind == "booking_cancelled":
-        return f"Reserva pendente {result['booking_id']} descartada."
-    return "\n".join(f"{b['id']} [{b['status']}] {b['currency']} {b['amount']} · {b['booking_reference'] or b['offer_id']}" for b in result["bookings"]) or "Nenhuma reserva."
-
-
 def to_text(result: dict) -> str:
     if result.get("kind", "").startswith("watch"):
         return watch_text(result)
-    if result.get("kind", "").startswith("booking"):
-        return booking_text(result)
     if "airports" in result:
         return "\n".join(f"{x['iata']} — {x['city']} ({x['name']}, {x['country']})" for x in result["airports"]) or "Nenhum aeroporto encontrado."
     q = result["query"]
@@ -1021,12 +696,7 @@ def to_text(result: dict) -> str:
         typical = f"; faixa típica {money(rng[0], q['currency'])}–{money(rng[1], q['currency'])}" if len(rng) == 2 else ""
         lines.append(f"Avaliação do Google: preço {level}{typical}")
     for i, o in enumerate(result["offers"], 1):
-        extras = []
-        if o["checked_bags"] is not None:
-            extras.append(f"{o['checked_bags']} mala(s)")
-        if o["refundable"] is not None:
-            extras.append("reembolsável" if o["refundable"] else "não reembolsável")
-        lines.append(f"{i}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(a for a in o['airlines'] if a)} | " + " || ".join(describe_slice(s) for s in o["slices"]) + (f" | {', '.join(extras)}" if extras else "") + f" | id={o['id']}")
+        lines.append(f"{i}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(a for a in o['airlines'] if a)} | " + " || ".join(describe_slice(s) for s in o["slices"]) + f" | id={o['id']}")
     for d in result.get("by_date", []):
         cheapest = money(d["cheapest"], q["currency"]) if d["cheapest"] is not None else "—"
         level = f", preço {d['price_level']}" if d.get("price_level") else ""
@@ -1040,7 +710,7 @@ def to_text(result: dict) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="flights.py", description="Pesquisa e monitoramento de voos; reserva opcional com aprovação humana.")
+    p = argparse.ArgumentParser(prog="flights.py", description="Pesquisa e monitoramento de preços de voos (Google Flights via SerpApi). Não reserva nem compra.")
     p.add_argument("--version", action="version", version=VERSION)
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -1053,7 +723,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--children-ages", default="", help="Idades das crianças (2-17), separadas por vírgula. Ex.: 5,9")
     s.add_argument("--infants", type=int, default=0, help="Bebês de colo (<2 anos)")
     s.add_argument("--cabin", choices=["economy", "premium_economy", "business", "first"], default="economy")
-    s.add_argument("--currency", default=os.environ.get("FLIGHTS_CURRENCY", "BRL"), help="Moeda (serpapi; duffel usa a moeda da conta)")
+    s.add_argument("--currency", default=os.environ.get("FLIGHTS_CURRENCY", "BRL"), help="Moeda (padrão BRL)")
     s.add_argument("--max-stops", type=int, choices=[0, 1, 2])
     s.add_argument("--max-price", type=float)
     s.add_argument("--max-duration", type=float, help="Duração máxima por trecho, em horas")
@@ -1061,18 +731,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--exclude-airlines", help="Excluir estas cias")
     s.add_argument("--depart-after", help="Partida da ida a partir de HH:MM (hora local)")
     s.add_argument("--depart-before", help="Partida da ida até HH:MM (hora local)")
-    s.add_argument("--refundable", action="store_true", help="Somente tarifas reembolsáveis (quando o provedor informa)")
     s.add_argument("--flex-days", type=int, default=0, help=f"Buscar também ±N dias (0-{MAX_FLEX_DAYS}); cada dia é uma chamada")
     s.add_argument("--sort", choices=["price", "duration", "departure", "stops", "best"], default="price")
     s.add_argument("--limit", type=int, default=10)
-    s.add_argument("--provider", choices=list(PROVIDERS), help="Padrão: FLIGHTS_PROVIDER, ou duffel/serpapi conforme a chave disponível")
+    s.add_argument("--provider", choices=list(PROVIDERS), help="Padrão: serpapi (mock = dados fictícios para teste)")
     s.add_argument("--no-cache", action="store_true")
     s.add_argument("--format", choices=["json", "text"], default="json")
     s.set_defaults(func=cmd_search)
 
     ap = sub.add_parser("airports", help="Descobrir códigos IATA por cidade/aeroporto")
     ap.add_argument("query")
-    ap.add_argument("--offline", action="store_true", help="Usar só a lista local")
     ap.add_argument("--format", choices=["json", "text"], default="json")
     ap.set_defaults(func=cmd_airports)
 
@@ -1093,28 +761,28 @@ def build_parser() -> argparse.ArgumentParser:
     wc.add_argument("--id", dest="watch_id")
     wc.set_defaults(func=cmd_watch_check)
 
-    b = sub.add_parser("book", help="Reserva Duffel com aprovação humana (desligada por padrão)")
-    bsub = b.add_subparsers(dest="book_command", required=True)
-    bp = bsub.add_parser("prepare", help="Conferir preço e gerar código de aprovação")
-    bp.add_argument("--offer-id", required=True)
-    bp.add_argument("--passengers-file", required=True, help="JSON: lista com given_name, family_name, born_on, gender, title, email, phone_number")
-    bp.set_defaults(func=cmd_book_prepare)
-    bc = bsub.add_parser("confirm", help="Emitir após o usuário repetir o código")
-    bc.add_argument("--booking-id", required=True)
-    bc.add_argument("--approval-code", required=True)
-    bc.set_defaults(func=cmd_book_confirm)
-    bx = bsub.add_parser("cancel", help="Descartar reserva pendente")
-    bx.add_argument("booking_id")
-    bx.set_defaults(func=cmd_book_cancel)
-    bl = bsub.add_parser("list")
-    bl.set_defaults(func=cmd_book_list)
-
-    for parser in (wa, wl, wr, wc, bp, bc, bx, bl):
+    for parser in (wa, wl, wr, wc):
         parser.add_argument("--format", choices=["json", "text"], default="json")
     return p
 
 
+def load_env_file() -> None:
+    """Lê KEY=VALOR do .env da skill (pasta acima de scripts/). Variáveis já definidas no ambiente têm prioridade."""
+    path = os.environ.get("FLIGHTS_ENV_FILE") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
 def main(argv: list | None = None) -> int:
+    load_env_file()
     args = build_parser().parse_args(argv)
     try:
         result = args.func(args)
