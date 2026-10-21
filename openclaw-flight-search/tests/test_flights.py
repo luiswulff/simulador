@@ -247,6 +247,26 @@ class TestQuote(Base):
         self.assertEqual(picked[0]["id"], "1")                      # direto equilibrado é a principal
         self.assertEqual([o["id"] for o in picked[1:]], ["2", "3", "4"])  # alternativas com conexão, mais baratas
 
+    def test_quote_brand(self):
+        src = self.make_search()
+        out = os.path.join(self.tmp.name, "marca.html")
+        run("quote", "--from-json", src, "--output", out)
+        with open(out, encoding="utf-8") as f:
+            page = f.read()
+        self.assertIn('<span class="brand-text">tax.co</span>', page)  # marca escrita por padrão
+        self.assertIn("Hanken Grotesk", page)
+        logo = os.path.join(self.tmp.name, "logo.png")
+        with open(logo, "wb") as f:  # PNG 1x1 transparente
+            f.write(bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                                  "1f15c4890000000d49444154789c63000100000500010d0a2db40000000049454e44ae426082"))
+        os.environ["FLIGHTS_BRAND_LOGO"] = logo
+        try:
+            run("quote", "--from-json", src, "--output", out)
+        finally:
+            del os.environ["FLIGHTS_BRAND_LOGO"]
+        with open(out, encoding="utf-8") as f:
+            self.assertIn('<img class="logo" src="data:image/png;base64,', f.read())
+
     def test_quote_needs_input(self):
         self.assertEqual(run("quote")[1]["error"]["code"], "invalid_request")
 

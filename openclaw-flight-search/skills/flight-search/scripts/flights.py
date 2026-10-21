@@ -787,7 +787,7 @@ def render_card(rank: int, o: dict, tags: list, seats: int) -> str:
     return f"""
     <article class="card">
       <header class="card-head">
-        <span class="rank">{rank}</span>
+        <span class="rank">{rank:02d}</span>
         <div class="price"><b>{esc(money_q(amount, currency))}</b>{per}</div>
         <div class="who"><span class="air">{esc(" · ".join(a for a in o["airlines"] if a))}</span>{tag_html}</div>
         {link_html}
@@ -886,7 +886,22 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         pax.append(f"{q['infants']} bebê{'s' if q['infants'] > 1 else ''}")
     dates = date_pt(q["depart"]) + (f" – {date_pt(q['return'])}" if q.get("return") else "")
     meta = [q["origin"].replace(",", "/") + " → " + q["destination"].replace(",", "/"), dates + f" {q['depart'][:4]}",
-            ", ".join(pax), CABIN_PT.get(q["cabin"], q["cabin"]), "Ida e volta" if q.get("return") else "Só ida"]
+            ", ".join(pax), CABIN_PT.get(q["cabin"], q["cabin"])]
+    trip_label = "Ida e volta" if q.get("return") else "Só ida"
+    if q.get("provider") == "mock":
+        trip_label = "Amostra com dados fictícios · " + trip_label
+
+    # sem logo configurado, usa a marca escrita (padrão: tax.co em Hanken Grotesk)
+    wordmark = os.environ.get("FLIGHTS_BRAND_WORDMARK") or "tax.co"
+    logo_html = logo_small_html = f'<span class="brand-text">{esc(wordmark)}</span>'
+    logo_path = os.environ.get("FLIGHTS_BRAND_LOGO") or ""
+    if logo_path and os.path.isfile(logo_path):
+        import base64
+        import mimetypes
+        mime = mimetypes.guess_type(logo_path)[0] or "image/png"
+        with open(logo_path, "rb") as f:
+            src = f"data:{mime};base64," + base64.b64encode(f.read()).decode()
+        logo_html = logo_small_html = f'<img class="logo" src="{src}" alt="{esc(wordmark)}">'
 
     pi = result.get("price_insights") or {}
     rng = pi.get("typical_range") or []
@@ -895,7 +910,7 @@ def cmd_quote(a: argparse.Namespace) -> dict:
              ("Mais rápida", fmt_minutes(fastest["total_duration_minutes"]), "em voo e conexões, ida" + (" e volta" if q.get("return") else ""))]
     if len(rng) == 2:
         stats.append(("Faixa típica · Google", f"{money_short(rng[0], currency)}–{money_short(rng[1], currency).split(' ', 1)[1]}", f"Preço atual {level}" if level else ""))
-    summary_html = "".join(f'<div class="stat"><span>{esc(k)}</span><b>{esc(v)}</b><small>{esc(n)}</small></div>' for k, v, n in stats)
+    summary_html = "".join(f'<div class="stat"><span class="label">{esc(k)}</span><b>{esc(v)}</b><small>{esc(n)}</small></div>' for k, v, n in stats)
 
     mock_note = "Amostra com dados fictícios. " if q.get("provider") == "mock" else ""
     footnote = (f"{mock_note}Valores totais para {', '.join(pax)}, em {CURRENCY_SYMBOL.get(currency, currency)}, consultados no Google Flights em "
@@ -910,6 +925,11 @@ def cmd_quote(a: argparse.Namespace) -> dict:
         "route_title": f"{esc(city_of(o_code))} <span>→</span> {esc(city_of(d_code))}",
         "route_meta": " · ".join(esc(m) for m in meta),
         "client_line": f'<p class="client">Para {esc(a.client)}</p>' if a.client else "",
+        "trip_label": esc(trip_label),
+        # cada voo/conexão é uma linha; acima de ~22 linhas a impressão reduz a escala para caber em uma página
+        "print_zoom": f"{min(1.0, max(0.78, 22 / max(1, sum(len(sl['segments']) * 2 - 1 for o in chosen for sl in o['slices'])))):.2f}",
+        "logo_html": logo_html,
+        "logo_small_html": logo_small_html,
         "summary_html": summary_html,
         "options_html": "".join(cards),
         "footnote": esc(footnote),

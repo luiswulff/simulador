@@ -72,7 +72,15 @@ python3 $S quote --from-json busca.json --client "Helena Prado" --pdf --format t
 ```
 
 Custo típico de uma cotação de ida e volta: 1 busca + 4 buscas de volta = **5 créditos SerpApi**.
-A marca exibida é **Argos Core** (mude com `FLIGHTS_BRAND_NAME` ou `--brand`). O visual fica em `skills/flight-search/templates/quote.html`.
+**Visual: padrão TaxCo** (Handbook APG): Hanken Grotesk, preto/branco/pedra `#F0EDE6`, rótulos em caixa alta espaçada, filete preto sob o destaque, painéis retos e numerais finos. O rótulo do produto é **Argos Core** (`FLIGHTS_BRAND_NAME` ou `--brand`).
+
+Logo: por padrão o cabeçalho mostra a marca escrita **tax.co** (`FLIGHTS_BRAND_WORDMARK` muda o texto). Para usar o logo oficial, aponte para o arquivo na máquina do agente — ele é embutido no HTML/PDF de cada cotação e não precisa ficar no repositório:
+
+```
+FLIGHTS_BRAND_LOGO=/caminho/para/taxco-logo.png
+```
+
+O template fica em `skills/flight-search/templates/quote.html`. Com muitos trechos, a impressão reduz levemente a escala para manter tudo em uma página.
 
 ## Monitor de preço
 
