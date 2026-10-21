@@ -17,6 +17,7 @@ import argparse
 import datetime as dt
 import gzip
 import hashlib
+import html
 import json
 import os
 import random
@@ -29,7 +30,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 USER_AGENT = f"openclaw-flight-search/{VERSION}"
 HTTP_TIMEOUT = 45
 MAX_FLEX_DAYS = 3
@@ -630,6 +631,320 @@ def cmd_watch_check(a: argparse.Namespace) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Cotação para o cliente (HTML de papelaria, pronto para enviar ou imprimir em PDF)
+
+WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+CABIN_PT = {"economy": "Classe econômica", "premium_economy": "Premium economy", "business": "Classe executiva", "first": "Primeira classe"}
+CURRENCY_PT = {"BRL": "reais", "USD": "dólares americanos", "EUR": "euros"}
+ROMAN = ["I", "II", "III", "IV", "V"]
+AMENITIES_PT = [
+    (r"legroom \((\d+) cm\)", "Espaço entre poltronas {0} cm"),
+    (r"^Free Wi-Fi", "Wi-Fi gratuito"),
+    (r"^Wi-Fi for a fee", "Wi-Fi pago"),
+    (r"power & USB", "Tomada e USB na poltrona"),
+    (r"^In-seat power outlet", "Tomada na poltrona"),
+    (r"^In-seat USB", "USB na poltrona"),
+    (r"^On-demand video", "Entretenimento individual"),
+    (r"^Lie flat seat", "Assento-cama"),
+]
+
+
+CURRENCY_SYMBOL = {"BRL": "R$", "USD": "US$", "EUR": "€", "GBP": "£"}
+
+
+def money_q(amount: float, currency: str) -> str:
+    """Valor para o cliente: símbolo em vez do código ISO (R$ 12.626,00)."""
+    return money(amount, currency).replace(currency, CURRENCY_SYMBOL.get(currency, currency), 1)
+
+
+def esc(value) -> str:
+    return html.escape(str(value if value is not None else ""), quote=True)
+
+
+def city_of(code: str | None) -> str:
+    return next((city for c, city, *_ in AIRPORTS if c == code), code or "")
+
+
+def date_pt(value: str | dt.date) -> str:
+    d = dt.date.fromisoformat(value[:10]) if isinstance(value, str) else value
+    return f"{WEEKDAYS[d.weekday()]}, {d.day} {MONTHS[d.month - 1]} {d.year}"
+
+
+def amenities_pt(segment: dict) -> list:
+    out = []
+    for raw in segment.get("amenities") or []:
+        for pattern, label in AMENITIES_PT:
+            m = re.search(pattern, raw)
+            if m:
+                out.append(label.format(*m.groups()))
+                break
+    return out
+
+
+def pick_options(offers: list, count: int) -> list:
+    """Curadoria: recomendação (preço × tempo), a mais econômica e a mais rápida, sem repetir."""
+    if not offers:
+        return []
+    by_best, by_price, by_time = sort_offers(offers, "best"), sort_offers(offers, "price"), sort_offers(offers, "duration")
+    picks, seen = [], set()
+
+    def add(offer, role):
+        if offer["id"] not in seen and len(picks) < count:
+            seen.add(offer["id"])
+            picks.append((offer, role))
+
+    add(by_best[0], "recommended")
+    add(by_price[0], "cheapest")
+    add(by_time[0], "fastest")
+    for o in by_best:
+        add(o, "alternative")
+    return picks
+
+
+def option_reason(offer: dict, role: str, cheapest: dict, recommended: dict, currency: str) -> str:
+    s = offer["slices"][0]
+    diff = offer["price"]["amount"] - cheapest["price"]["amount"]
+    stops = "voo direto" if s["stops"] == 0 else f"{s['stops']} conexão em {city_of(s['segments'][0]['to'])}" if s["stops"] == 1 else f"{s['stops']} conexões"
+    dur = fmt_minutes(s["duration_minutes"])
+    if role == "recommended":
+        if diff <= 0:
+            return f"A menor tarifa encontrada, em {stops} de {dur}. Equilíbrio raro entre preço e conforto."
+        return f"{stops.capitalize()} de {dur}, por apenas {money_q(diff, currency)} a mais que a tarifa mais baixa. É a nossa escolha."
+    if role == "cheapest":
+        extra = (offer["total_duration_minutes"] or 0) - (recommended["total_duration_minutes"] or 0)
+        longer = f", {fmt_minutes(extra)} a mais de viagem que a recomendação" if extra > 0 else ""
+        return f"A tarifa mais baixa da pesquisa, com {stops}{longer}."
+    if role == "fastest":
+        return f"O trajeto mais curto: {stops} de {dur}."
+    dep = local_hhmm(s["departure"])
+    other = "outro horário" if set(offer["airlines"]) & set(recommended["airlines"]) else "outro horário ou companhia"
+    return f"Alternativa com {stops} e partida às {dep}, para quem prefere {other}."
+
+
+def render_leg(s: dict) -> str:
+    dep, arr = local_hhmm(s["departure"]) or "--:--", local_hhmm(s["arrival"]) or "--:--"
+    try:
+        plus = (parse_local(s["arrival"]).date() - parse_local(s["departure"]).date()).days
+    except (TypeError, ValueError):
+        plus = 0
+    stops_html = ""
+    for i, seg in enumerate(s["segments"][:-1], 1):
+        pos = 100 * i / len(s["segments"])
+        stops_html += f'<span class="stop" style="left:{pos:.1f}%"></span><span class="stop-label" style="left:{pos:.1f}%">{esc(seg["to"])}</span>'
+    return f"""
+      <div class="path">
+        <div class="end"><span class="time">{esc(dep)}</span><span class="code">{esc(s["origin"])}</span></div>
+        <div class="track" aria-label="{esc(fmt_minutes(s['duration_minutes']))}, {s['stops']} parada(s)">
+          <span class="track-dur">{esc(fmt_minutes(s["duration_minutes"]))}</span>{stops_html}
+        </div>
+        <div class="end arr"><span class="time">{esc(arr)}{f"<sup>+{plus}</sup>" if plus > 0 else ""}</span><span class="code">{esc(s["destination"])}</span></div>
+      </div>"""
+
+
+def render_option(index: int, offer: dict, role: str, reason: str, seats: int) -> str:
+    labels = {"recommended": "Recomendação da casa", "cheapest": "A mais econômica", "fastest": "A mais rápida", "alternative": "Alternativa"}
+    s = offer["slices"][0]
+    amount, currency = offer["price"]["amount"], offer["price"]["currency"]
+    per = f'<div class="per">{esc(money_q(amount / seats, currency))} por pessoa</div>' if seats > 1 else ""
+    stops = "Direto" if s["stops"] == 0 else f"{s['stops']} conexão em {city_of(s['segments'][0]['to'])}" if s["stops"] == 1 else f"{s['stops']} conexões"
+    flights = " · ".join(seg["flight_number"] for seg in s["segments"] if seg.get("flight_number"))
+    aircraft = next((seg["aircraft"] for seg in s["segments"] if seg.get("aircraft")), None)
+    comfort = amenities_pt(s["segments"][0])[:2]
+    facts = [f"<span><b>{esc(stops)}</b></span>", f'<span class="mono">{esc(flights)}</span>']
+    if aircraft:
+        facts.append(f"<span>{esc(aircraft)}</span>")
+    facts += [f"<span>{esc(c)}</span>" for c in comfort]
+    ret = (offer.get("search_dates") or {}).get("return")
+    return_line = (f'<div class="return-line"><b>Volta</b> · {esc(date_pt(ret))} · voos e horários escolhidos com você na emissão</div>'
+                   if ret else "")
+    return f"""
+    <article class="option{' featured' if role == 'recommended' else ''}">
+      <div class="option-head">
+        <div class="numeral">{ROMAN[index]}</div>
+        <div class="option-title"><span class="eyebrow">{esc(labels[role])}</span><h3>{esc(' & '.join(a for a in offer['airlines'] if a))}</h3></div>
+        <div class="price"><div class="amount"><small>{esc(CURRENCY_SYMBOL.get(currency, currency))}</small>{esc(money(amount, currency).split(' ', 1)[1])}</div>{per}</div>
+      </div>
+      <p class="why">{esc(reason)}</p>
+      <div class="leg">
+        <div class="leg-label"><span class="eyebrow">Ida · {esc(date_pt(s['departure']))}</span></div>
+        {render_leg(s)}
+        <div class="facts">{''.join(facts)}</div>
+      </div>
+      {return_line}
+    </article>"""
+
+
+def render_market(insights: dict | None, price: float, currency: str) -> str:
+    if not insights or not insights.get("typical_range") or len(insights["typical_range"]) != 2:
+        return ""
+    lo, hi = insights["typical_range"]
+    level = insights.get("level")
+    reading = {
+        "low": ("abaixo do usual", "É um momento favorável para emitir."),
+        "typical": ("dentro da faixa típica", "Não há sinal de queda iminente; sugerimos decidir dentro da validade desta proposta."),
+        "high": ("acima do usual", "Se houver flexibilidade de datas, podemos acompanhar a tarifa e avisar quando baixar."),
+    }.get(level, ("sem referência suficiente", ""))
+    start, end = min(lo, price) * 0.85, max(hi, price) * 1.08
+
+    def pos(v):
+        return 100 * (v - start) / (end - start)
+
+    return f"""
+  <section class="market">
+    <div class="eyebrow">Leitura de mercado</div>
+    <div>
+      <p>Pelo histórico do Google Flights para esta rota e estas datas, a tarifa recomendada está <b>{esc(reading[0])}</b>, que vai de {esc(money_q(lo, currency))} a {esc(money_q(hi, currency))}. {esc(reading[1])}</p>
+      <div class="scale" role="img" aria-label="Faixa típica de {esc(money_q(lo, currency))} a {esc(money_q(hi, currency))}; tarifa recomendada {esc(money_q(price, currency))}">
+        <div class="base"></div>
+        <div class="band" style="left:{pos(lo):.1f}%;width:{pos(hi) - pos(lo):.1f}%"></div>
+        <span class="tick" style="left:{pos(lo):.1f}%">{esc(money_q(lo, currency))}</span>
+        <span class="tick" style="left:{pos(hi):.1f}%">{esc(money_q(hi, currency))}</span>
+        <span class="band-label" style="left:{(pos(lo) + pos(hi)) / 2:.1f}%">faixa típica</span>
+        <div class="marker" style="left:{pos(price):.1f}%"><span>Nossa recomendação</span><i></i></div>
+      </div>
+    </div>
+  </section>"""
+
+
+def find_browser() -> str | None:
+    import shutil
+    for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "microsoft-edge"):
+        path = shutil.which(name)
+        if path:
+            return path
+    for path in ("/opt/pw-browsers/chromium", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def cmd_quote(a: argparse.Namespace) -> dict:
+    if a.from_json:
+        try:
+            with open(a.from_json, encoding="utf-8") as f:
+                result = json.load(f)
+        except (OSError, ValueError) as e:
+            raise FlightSearchError(f"Não consegui ler {a.from_json}: {e}", "invalid_request") from None
+        if "offers" not in result or "query" not in result:
+            raise FlightSearchError("O JSON precisa ser a saída de 'search' (com query e offers).", "invalid_request")
+    else:
+        argv = [x for x in a.search_args if x != "--"]
+        if not argv:
+            raise FlightSearchError("Informe --from-json ou os argumentos de busca após '--'.", "invalid_request")
+        sargs = parse_search_argv(argv + ["--limit", "50"])
+        result = cmd_search(sargs)
+    q, offers = result["query"], result["offers"]
+    if not offers:
+        raise FlightSearchError("A busca não trouxe ofertas para montar a cotação.", "no_results")
+
+    picks = pick_options(offers, max(1, min(a.options, len(ROMAN))))
+    recommended = picks[0][0]
+    cheapest = sort_offers(offers, "price")[0]
+    currency = recommended["price"]["currency"]
+    seats = q["adults"] + len(q.get("children_ages") or [])
+    options_html = "".join(
+        render_option(i, o, role, option_reason(o, role, cheapest, recommended, currency), seats)
+        for i, (o, role) in enumerate(picks)
+    )
+
+    brand = a.brand or os.environ.get("FLIGHTS_BRAND_NAME") or "Private Travel Office"
+    words = [w for w in re.split(r"\s+", brand) if w]
+    monogram = "".join(w[0] for w in words[:2]).upper() if len(words) > 1 else brand[:2].upper()
+    now = dt.datetime.now()
+    valid = now + dt.timedelta(hours=a.valid_hours)
+    reference = f"FS-{now:%Y%m%d}-{q['origin']}{q['destination']}-{secrets.token_hex(2).upper()}"
+    client = a.client or "Cliente"
+    first_name = client.split()[0]
+    pax = [f"{q['adults']} adulto{'s' if q['adults'] > 1 else ''}"]
+    if q.get("children_ages"):
+        pax.append(f"{len(q['children_ages'])} criança{'s' if len(q['children_ages']) > 1 else ''}")
+    if q.get("infants"):
+        pax.append(f"{q['infants']} bebê{'s' if q['infants'] > 1 else ''}")
+    pax_line = ", ".join(pax)
+    dates_line = date_pt(q["depart"]) + (f" — {date_pt(q['return'])}" if q.get("return") else "")
+    trip_kind = "Ida e volta" if q.get("return") else "Somente ida"
+    if q.get("provider") == "mock":
+        trip_kind = "Amostra com dados fictícios · " + trip_kind
+
+    if a.note:
+        paragraphs = [p.strip() for p in a.note.split("\n") if p.strip()]
+    else:
+        paragraphs = [
+            f"Analisamos {result['count']} tarifas entre {city_of(q['origin'])} e {city_of(q['destination'])} para {dates_line.replace(' — ', ' a ')} "
+            f"e reunimos aqui as que valem a sua atenção.",
+            "A primeira é a nossa recomendação; as demais estão aqui para que a decisão seja sua, com tudo à vista.",
+        ]
+    note_html = "".join(f"<p>{esc(p)}</p>" for p in paragraphs)
+
+    contact = [x for x in (a.email or os.environ.get("FLIGHTS_CONTACT_EMAIL"), a.phone or os.environ.get("FLIGHTS_CONTACT_PHONE"),
+                           os.environ.get("FLIGHTS_CONTACT_WEB")) if x]
+    return_term = ("<li>Em ida e volta, o valor corresponde à viagem completa. Os voos de volta são escolhidos e confirmados com você na emissão.</li>"
+                   if q.get("return") else "")
+    values = {
+        "title": f"Proposta {q['origin']}–{q['destination']} · {client}",
+        "brand": esc(brand),
+        "monogram": esc(monogram),
+        "tagline": esc(a.tagline or os.environ.get("FLIGHTS_BRAND_TAGLINE") or "Viagens sob medida"),
+        "reference": esc(reference),
+        "issued": esc(f"{now.day} {MONTHS[now.month - 1]} {now.year}, {now:%H:%M}"),
+        "valid_until": esc(f"{valid.day} {MONTHS[valid.month - 1]} {valid.year}, {valid:%H:%M}"),
+        "trip_kind": esc(trip_kind),
+        "cabin": esc(CABIN_PT.get(q["cabin"], q["cabin"])),
+        "origin_city": esc(city_of(q["origin"])),
+        "destination_city": esc(city_of(q["destination"])),
+        "origin_code": esc(q["origin"]),
+        "destination_code": esc(q["destination"]),
+        "dates_line": esc(dates_line),
+        "passengers_line": esc(pax_line),
+        "passengers_short": esc(pax_line),
+        "client": esc(client),
+        "salutation": esc(f"{first_name},"),
+        "note_html": note_html,
+        "options_count": esc(len(picks)),
+        "offers_considered": esc(result["count"]),
+        "options_html": options_html,
+        "market_html": render_market(result.get("price_insights"), recommended["price"]["amount"], currency),
+        "currency_name": esc(CURRENCY_PT.get(currency, currency)),
+        "return_term": return_term,
+        "advisor": esc(a.advisor or os.environ.get("FLIGHTS_ADVISOR_NAME") or brand),
+        "advisor_title": esc(a.advisor_title or os.environ.get("FLIGHTS_ADVISOR_TITLE") or "Consultoria de viagens"),
+        "contact_html": "<br>".join(esc(c) for c in contact),
+    }
+    template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "quote.html")
+    with open(template_path, encoding="utf-8") as f:
+        page = f.read()
+    for key, value in values.items():
+        page = page.replace("{{" + key + "}}", str(value))
+
+    out = a.output or os.path.join(state_dir(), "quotes", f"{reference}.html")
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(page)
+    response = {
+        "kind": "quote", "reference": reference, "html_path": os.path.abspath(out), "client": client,
+        "valid_until": valid.isoformat(timespec="minutes"),
+        "options": [{"label": ROMAN[i], "role": role, "airlines": o["airlines"], "price": o["price"], "offer_id": o["id"]} for i, (o, role) in enumerate(picks)],
+    }
+    if a.pdf:
+        browser = find_browser()
+        if not browser:
+            response["pdf_error"] = "Nenhum Chrome/Chromium encontrado; envie o HTML ou imprima em PDF pelo navegador."
+        else:
+            import subprocess
+            pdf_path = os.path.splitext(os.path.abspath(out))[0] + ".pdf"
+            proc = subprocess.run([browser, "--headless=new", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+                                   "--virtual-time-budget=8000",  # dá tempo às fontes carregarem antes de imprimir
+                                   f"--print-to-pdf={pdf_path}", "file://" + os.path.abspath(out)],
+                                  capture_output=True, text=True, timeout=90)
+            if os.path.exists(pdf_path):
+                response["pdf_path"] = pdf_path
+            else:
+                response["pdf_error"] = (proc.stderr or "falha ao gerar PDF")[-300:]
+    return response
+
+
+# ---------------------------------------------------------------------------
 # Saída em texto compacto (economiza tokens do agente)
 
 
@@ -679,6 +994,16 @@ def watch_text(result: dict) -> str:
 
 
 def to_text(result: dict) -> str:
+    if result.get("kind") == "quote":
+        lines = [f"Cotação {result['reference']} para {result['client']} (válida até {result['valid_until']})",
+                 f"HTML: {result['html_path']}"]
+        if result.get("pdf_path"):
+            lines.append(f"PDF: {result['pdf_path']}")
+        if result.get("pdf_error"):
+            lines.append(f"PDF não gerado: {result['pdf_error']}")
+        for o in result["options"]:
+            lines.append(f"  {o['label']}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(o['airlines'])} ({o['role']})")
+        return "\n".join(lines)
     if result.get("kind", "").startswith("watch"):
         return watch_text(result)
     if "airports" in result:
@@ -761,7 +1086,24 @@ def build_parser() -> argparse.ArgumentParser:
     wc.add_argument("--id", dest="watch_id")
     wc.set_defaults(func=cmd_watch_check)
 
-    for parser in (wa, wl, wr, wc):
+    qt = sub.add_parser("quote", help="Gerar cotação em HTML (e PDF) para o cliente")
+    qt.add_argument("--from-json", help="Saída JSON de um 'search' já feito (não gasta nova busca)")
+    qt.add_argument("--client", help="Nome do cliente")
+    qt.add_argument("--note", help="Texto da carta ao cliente (parágrafos separados por quebra de linha)")
+    qt.add_argument("--options", type=int, default=3, help="Quantas opções apresentar (1-5)")
+    qt.add_argument("--valid-hours", type=int, default=24, help="Validade da proposta em horas")
+    qt.add_argument("--brand", help="Nome da agência (ou FLIGHTS_BRAND_NAME)")
+    qt.add_argument("--tagline", help="Assinatura da marca (ou FLIGHTS_BRAND_TAGLINE)")
+    qt.add_argument("--advisor", help="Nome do consultor (ou FLIGHTS_ADVISOR_NAME)")
+    qt.add_argument("--advisor-title", help="Cargo do consultor (ou FLIGHTS_ADVISOR_TITLE)")
+    qt.add_argument("--email", help="Contato (ou FLIGHTS_CONTACT_EMAIL)")
+    qt.add_argument("--phone", help="Telefone (ou FLIGHTS_CONTACT_PHONE)")
+    qt.add_argument("--output", help="Caminho do HTML (padrão: pasta de estado/quotes)")
+    qt.add_argument("--pdf", action="store_true", help="Gerar PDF também (requer Chrome/Chromium)")
+    qt.add_argument("search_args", nargs=argparse.REMAINDER, help="Argumentos do 'search' após '--' (se não usar --from-json)")
+    qt.set_defaults(func=cmd_quote)
+
+    for parser in (wa, wl, wr, wc, qt):
         parser.add_argument("--format", choices=["json", "text"], default="json")
     return p
 
@@ -776,7 +1118,9 @@ def load_env_file() -> None:
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 key, value = line.split("=", 1)
-                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+                value = value.strip().strip('"').strip("'")
+                if value:
+                    os.environ.setdefault(key.strip(), value)
     except OSError:
         pass
 

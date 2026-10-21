@@ -192,6 +192,30 @@ class TestWatch(Base):
         self.assertEqual(res["error"]["code"], "invalid_request")
 
 
+class TestQuote(Base):
+    def test_quote_from_search_json(self):
+        os.environ["SERPAPI_API_KEY"] = "k"
+        with mock.patch.object(flights, "http_json", return_value=SERPAPI_RESPONSE):
+            _, res = run("search", "--from", "CGH", "--to", "SDU", "--depart", FUTURE, "--return", FUTURE_RET, "--adults", "2")
+        src = os.path.join(self.tmp.name, "busca.json")
+        with open(src, "w") as f:
+            json.dump(res, f)
+        out = os.path.join(self.tmp.name, "proposta.html")
+        code, q = run("quote", "--from-json", src, "--client", "Helena <Prado>", "--brand", "Casa Teste", "--output", out)
+        self.assertEqual(code, 0, q)
+        self.assertEqual([o["role"] for o in q["options"]], ["recommended", "fastest"])  # a recomendada já é a mais barata
+        with open(out, encoding="utf-8") as f:
+            page = f.read()
+        self.assertNotIn("{{", page)
+        self.assertIn("Helena &lt;Prado&gt;", page)          # dados do cliente escapados
+        self.assertIn("R$ 175,00 por pessoa", page)          # 350 / 2 adultos
+        self.assertIn("faixa típica", page)                   # leitura de mercado
+        self.assertIn("Volta", page)
+
+    def test_quote_needs_input(self):
+        self.assertEqual(run("quote")[1]["error"]["code"], "invalid_request")
+
+
 class TestEnvFile(Base):
     def test_key_from_env_file(self):
         path = os.environ["FLIGHTS_ENV_FILE"]

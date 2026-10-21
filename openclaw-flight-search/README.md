@@ -57,6 +57,28 @@ Avaliação do Google: preço típico; faixa típica BRL 620,00–BRL 1.400,00
 
 Horários são **locais** de cada aeroporto. Preço é o **total** para todos os passageiros. Em ida e volta, o preço é da viagem completa, mas só os voos de ida são detalhados.
 
+## Cotação para o cliente
+
+O comando `quote` transforma uma busca em uma **proposta de viagem com acabamento de ateliê**: monograma da casa, rota em tipografia didone, carta ao cliente, seleção curada (I · recomendação da casa, II · a mais econômica, III · a mais rápida ou alternativa), linha de voo com horários e conexões, leitura de mercado em escala (faixa típica do Google × nossa recomendação), condições e assinatura do consultor. Sai em HTML e, com `--pdf`, em PDF A4 (requer Chrome/Chromium).
+
+```bash
+python3 $S search --from GRU --to LIS --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 30 > busca.json
+python3 $S quote --from-json busca.json --client "Helena Prado" --pdf --format text
+```
+
+Identidade da sua agência, uma vez só no `.env`:
+
+```
+FLIGHTS_BRAND_NAME=Nome da Agência
+FLIGHTS_BRAND_TAGLINE=Viagens sob medida · São Paulo
+FLIGHTS_ADVISOR_NAME=Seu Nome
+FLIGHTS_ADVISOR_TITLE=Consultor de viagens
+FLIGHTS_CONTACT_EMAIL=contato@suaagencia.com
+FLIGHTS_CONTACT_PHONE=+55 11 0000-0000
+```
+
+O visual fica em `skills/flight-search/templates/quote.html` (tokens de cor e fontes no topo do CSS) e pode ser ajustado sem tocar no código.
+
 ## Monitor de preço
 
 ```bash

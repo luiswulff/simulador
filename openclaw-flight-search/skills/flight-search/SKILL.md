@@ -48,6 +48,21 @@ Script: `python3 {baseDir}/scripts/flights.py` (somente biblioteca padrão; a ch
 | `--limit N` | padrão 10 |
 | `--currency` | padrão `BRL` |
 
+## Cotação para o cliente
+
+Quando o usuário pedir uma **cotação/proposta** para enviar a um cliente, gere o documento a partir de uma busca já feita (não gasta nova busca):
+
+```
+python3 {baseDir}/scripts/flights.py search --from GRU --to LIS --depart 2026-12-10 --return 2026-12-20 --adults 2 --limit 30 > /tmp/busca.json
+python3 {baseDir}/scripts/flights.py quote --from-json /tmp/busca.json --client "Helena Prado" --pdf --format text
+```
+
+- A curadoria é automática: **I** recomendação da casa (equilíbrio preço × tempo), **II** a mais econômica e **III** a mais rápida ou uma alternativa. Use `--options 1..5` para mudar a quantidade.
+- `--note "texto"` substitui a carta padrão por uma mensagem sua ao cliente (parágrafos separados por quebra de linha). Escreva em tom cordial e sóbrio, sem exageros.
+- A saída informa `html_path` e `pdf_path`. Envie o **PDF** ao cliente (ou o HTML se não houver navegador para gerar o PDF). Não mostre ao cliente a saída técnica do comando.
+- Marca, consultor e contatos vêm de `FLIGHTS_BRAND_NAME`, `FLIGHTS_BRAND_TAGLINE`, `FLIGHTS_ADVISOR_NAME`, `FLIGHTS_ADVISOR_TITLE`, `FLIGHTS_CONTACT_EMAIL`, `FLIGHTS_CONTACT_PHONE` (no `.env`) ou das opções `--brand`, `--advisor`, `--email`, `--phone`.
+- Nunca gere cotação com `provider: mock` para um cliente real.
+
 ## Monitor de preço
 
 Quando o usuário pedir "me avise quando baixar", crie um monitor com os mesmos argumentos do `search` depois de `--`:
