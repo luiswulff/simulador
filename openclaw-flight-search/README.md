@@ -1,4 +1,4 @@
-# OpenClaw · Flight Search
+# OpenClaw · Flight & Hotel Search
 
 Skill de **pesquisa e monitoramento de preços de voos** para agentes autônomos [OpenClaw](https://docs.openclaw.ai), usando o Google Flights via [SerpApi](https://serpapi.com).
 O agente busca, compara, avalia se o preço está bom, gera cotações de uma página e avisa quando baixar. **Não reserva nem compra** — a compra fica com você, pelo link do Google Flights.
@@ -121,3 +121,32 @@ openclaw cron add \
 ```bash
 python3 -m unittest discover -s tests -v   # offline: toda chamada HTTP é simulada
 ```
+
+---
+
+# Skill de hotéis (`skills/hotel-search`)
+
+Pesquisa e cotação de **hotéis** no Google Hotels (via SerpApi, mesma chave). Cada hotel traz:
+
+| Critério | O que aparece |
+|---|---|
+| **Categoria** | estrelas (2–5) ou "sem categoria"; por padrão só hotéis (aluguéis com `--include-rentals`) |
+| **Preço** | diária e total da estadia, com taxas; **semáforo dentro/fora do preço** |
+| **Qualidade** | nota geral, nº de avaliações, selo "melhor avaliado" |
+| **Localização** | nota de localização, distância até um ponto de referência (`--near`), tempo até atrações e aeroporto |
+| **Comodidades** | café incluso, Wi-Fi, academia, estacionamento, salas de reunião, ar, piscina… (filtráveis) |
+| **Condições** | cancelamento grátis, check-in/check-out, faixa típica de preço do hotel |
+| **Onde reservar** | melhor oferta entre os sites, **Hotels.com**, site oficial e Google Hotels |
+
+**Semáforo:** com orçamento (`--budget` ou `HOTELS_BUDGET_PER_NIGHT`) 🟢 até o orçamento · 🟡 até +10% · 🔴 fora da política. Sem orçamento, usa a faixa típica do próprio hotel (Google) ou o desconto informado pelo Google / a mediana da categoria.
+
+```bash
+H=skills/hotel-search/scripts/hotels.py
+python3 $H search --where "Avenida Paulista, São Paulo" --check-in 2026-11-16 --check-out 2026-11-18 --budget 600 --min-rating 4 --format text
+python3 $H search ... --limit 20 > hoteis.json
+python3 $H quote --from-json hoteis.json --client "Helena Prado" --pdf --format text
+```
+
+A **cotação** (uma página A4, padrão TaxCo) traz recomendado, os melhores dentro do orçamento, o mais em conta com 3★ ou mais e uma opção superior mesmo fora da política, do menor ao maior preço. Custo típico: 1 busca + 1 por hotel detalhado (≈ 6 créditos SerpApi para 5 hotéis; cache de 15 min).
+
+**Hotels.com:** não usamos usuário e senha. A Hotels.com não tem API para contas de cliente (a API do grupo Expedia é só para parceiros comerciais), e automatizar o login violaria os termos e exporia a senha. Em vez disso, a cotação mostra o preço da Hotels.com quando o Google o tem e, sempre, um link que abre o hotel com as datas no Hotels.com — logado no app ou no site, você vê as tarifas de membro e reserva por lá.
