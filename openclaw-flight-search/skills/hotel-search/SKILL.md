@@ -62,7 +62,7 @@ Script: `python3 {baseDir}/scripts/hotels.py` (biblioteca padrão; chave SerpApi
 ## Cotação
 
 - Curadoria: **recomendado** + melhores dentro do orçamento + **mais em conta com 3★ ou mais** (evita hostel) + **uma opção superior** (4★+, bem avaliada) mesmo fora da política, sinalizada. Ordem: do menor ao maior preço.
-- Para cada hotel, o script consulta o detalhe (1 busca por hotel; `--no-details` desliga): melhor oferta entre os sites, **Hotels.com** (preço quando o Google tem; senão link "Hotels.com" que abre a busca com as datas — logado, o usuário vê a tarifa de membro), site oficial e faixa típica.
+- Para cada hotel, o script consulta o detalhe (1 busca por hotel; `--no-details` desliga): melhor oferta entre os sites, **Hotels.com** e **Booking** (preço quando o Google tem; senão link que abre a busca do hotel com as datas — logado, o usuário vê a tarifa de membro), site oficial e faixa típica.
 
 ## Regras
 

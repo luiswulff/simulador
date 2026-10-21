@@ -136,7 +136,7 @@ Pesquisa e cotação de **hotéis** no Google Hotels (via SerpApi, mesma chave).
 | **Localização** | nota de localização, distância até um ponto de referência (`--near`), tempo até atrações e aeroporto |
 | **Comodidades** | café incluso, Wi-Fi, academia, estacionamento, salas de reunião, ar, piscina… (filtráveis) |
 | **Condições** | cancelamento grátis, check-in/check-out, faixa típica de preço do hotel |
-| **Onde reservar** | melhor oferta entre os sites, **Hotels.com**, site oficial e Google Hotels |
+| **Onde reservar** | melhor oferta entre os sites, **Hotels.com**, **Booking**, site oficial e Google Hotels |
 
 **Semáforo:** com orçamento (`--budget` ou `HOTELS_BUDGET_PER_NIGHT`) 🟢 até o orçamento · 🟡 até +10% · 🔴 fora da política. Sem orçamento, usa a faixa típica do próprio hotel (Google) ou o desconto informado pelo Google / a mediana da categoria.
 
@@ -149,4 +149,4 @@ python3 $H quote --from-json hoteis.json --client "Helena Prado" --pdf --format 
 
 A **cotação** (uma página A4, padrão TaxCo) traz recomendado, os melhores dentro do orçamento, o mais em conta com 3★ ou mais e uma opção superior mesmo fora da política, do menor ao maior preço. Custo típico: 1 busca + 1 por hotel detalhado (≈ 6 créditos SerpApi para 5 hotéis; cache de 15 min).
 
-**Hotels.com:** não usamos usuário e senha. A Hotels.com não tem API para contas de cliente (a API do grupo Expedia é só para parceiros comerciais), e automatizar o login violaria os termos e exporia a senha. Em vez disso, a cotação mostra o preço da Hotels.com quando o Google o tem e, sempre, um link que abre o hotel com as datas no Hotels.com — logado no app ou no site, você vê as tarifas de membro e reserva por lá.
+**Hotels.com:** não usamos usuário e senha. A Hotels.com não tem API para contas de cliente (a API do grupo Expedia é só para parceiros comerciais), e automatizar o login violaria os termos e exporia a senha. Em vez disso, a cotação mostra o preço da Hotels.com quando o Google o tem e, sempre, um link que abre o hotel com as datas no Hotels.com — logado no app ou no site, você vê as tarifas de membro e reserva por lá. O mesmo vale para a **Booking**: preço e link quando o Google tem a oferta; senão, a busca do hotel na Booking com datas e hóspedes.

@@ -165,6 +165,7 @@ class TestQuote(Base):
         self.assertEqual(prices, sorted(prices))
         self.assertEqual(q["options"][0]["hotels_com"]["night"], 520)
         self.assertEqual(q["options"][0]["best_offer"]["source"], "Booking.com")
+        self.assertEqual(q["options"][0]["booking"]["night"], 455)
         with open(out, encoding="utf-8") as f:
             page = f.read()
         self.assertNotIn("{{", page)
@@ -183,6 +184,11 @@ class TestQuote(Base):
         http.assert_not_called()
         self.assertEqual(q["detail_lookups"], 0)
         self.assertIn("search_link", q["options"][0]["hotels_com"])     # sem detalhe: link de busca no Hotels.com
+        self.assertIn("booking.com/searchresults.html?ss=", q["options"][0]["booking"]["search_link"])
+        with open(os.path.join(self.tmp.name, "c.html"), encoding="utf-8") as f:
+            page = f.read()
+        self.assertIn("booking.com/searchresults.html", page)
+        self.assertIn("checkin=" + CHECK_IN, page)
 
 
 if __name__ == "__main__":

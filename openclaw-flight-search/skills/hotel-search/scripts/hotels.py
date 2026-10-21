@@ -316,6 +316,7 @@ def serpapi_details(q: dict, token: str, no_cache: bool = False) -> dict:
         "typical_range": [tpr["extracted_lowest"], tpr["extracted_highest"]] if tpr.get("extracted_lowest") and tpr.get("extracted_highest") else None,
         "offers": offers,
         "hotels_com": next((o for o in offers if o["source"].lower().startswith("hotels.com")), None),
+        "booking": next((o for o in offers if o["source"].lower().startswith("booking.com")), None),
         "official": next((o for o in offers if o["official"]), None),
         "cheapest": min((o for o in offers if o["night"]), key=lambda o: o["night"], default=None),
         "check_in_time": resp.get("check_in_time"),
@@ -555,11 +556,17 @@ def render_hotel(rank: int, h: dict, q: dict, tags: list) -> str:
     best = d.get("cheapest")
     if best and best.get("link") and not best.get("official"):
         links.append(f'<a href="{esc(best["link"])}" target="_blank" rel="noopener" title="Menor preço entre os sites">Melhor: {esc(best["source"])} {esc(money_short(best["night"], cur))}&nbsp;↗</a>')
-    hc = d.get("hotels_com")
-    if hc and hc.get("link") and hc is not best:
-        links.append(f'<a href="{esc(hc["link"])}" target="_blank" rel="noopener">Hotels.com {esc(money_short(hc["night"], cur)) if hc.get("night") else ""}&nbsp;↗</a>')
-    elif not hc:
-        links.append(f'<a href="{esc(hotels_com_search_url(h["name"], q))}" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a>')
+    best_src = (best or {}).get("source")
+    # Hotels.com e Booking sempre presentes: com preço quando o Google tem a oferta; senão, busca com as datas
+    for key, label, search_url in (("hotels_com", "Hotels.com", hotels_com_search_url), ("booking", "Booking", booking_search_url)):
+        offer = d.get(key)
+        if offer and offer.get("link"):
+            if offer["source"] != best_src:
+                price = f" {money_short(offer['night'], cur)}" if offer.get("night") else ""
+                links.append(f'<a href="{esc(offer["link"])}" target="_blank" rel="noopener">{label}{esc(price)}&nbsp;↗</a>')
+        else:
+            links.append(f'<a href="{esc(search_url(h["name"], q))}" target="_blank" rel="noopener" '
+                         f'title="Buscar no {label} com as datas (entre na sua conta para tarifas de membro)">{label}&nbsp;↗</a>')
     off = d.get("official")
     official_link = (off or {}).get("link") or d.get("official_link") or h["links"].get("official")
     if official_link:
@@ -648,6 +655,13 @@ def hotels_com_search_url(name: str, q: dict) -> str:
         "destination": name, "startDate": q["check_in"], "endDate": q["check_out"], "rooms": 1, "adults": q["adults"]})
 
 
+def booking_search_url(name: str, q: dict) -> str:
+    """Busca do hotel na Booking com datas e hóspedes."""
+    return "https://www.booking.com/searchresults.html?" + urllib.parse.urlencode({
+        "ss": name, "checkin": q["check_in"], "checkout": q["check_out"], "group_adults": q["adults"],
+        "group_children": len(q.get("children_ages") or []), "no_rooms": 1})
+
+
 def find_browser() -> str | None:
     import shutil
     for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "microsoft-edge"):
@@ -707,6 +721,7 @@ def cmd_quote(a: argparse.Namespace) -> dict:
             "rank": rank, "name": h["name"], "stars": h["stars"], "rating": h["rating"], "reviews": h["reviews"],
             "price": h["price"], "signal": h["signal"], "tags": [t for t, _ in tags],
             "hotels_com": d.get("hotels_com") or {"search_link": hotels_com_search_url(h["name"], q)},
+            "booking": d.get("booking") or {"search_link": booking_search_url(h["name"], q)},
             "best_offer": d.get("cheapest"),
             "official": d.get("official") or ({"link": h["links"].get("official")} if h["links"].get("official") else None),
             "typical_range": d.get("typical_range"), "distance_km": h.get("distance_km"),
@@ -806,6 +821,8 @@ def to_text(r: dict) -> str:
             hc, best = o.get("hotels_com") or {}, o.get("best_offer") or {}
             extra = f" | melhor oferta {best['source']} {money_short(best['night'], o['price']['currency'])}" if best.get("night") else ""
             extra += f" | Hotels.com {money_short(hc['night'], o['price']['currency'])}" if hc.get("night") else " | Hotels.com: buscar"
+            bk = o.get("booking") or {}
+            extra += f" | Booking {money_short(bk['night'], o['price']['currency'])}" if bk.get("night") else " | Booking: buscar"
             tags = f" [{', '.join(o['tags'])}]" if o["tags"] else ""
             lines.append(f"  {o['rank']}. {LIGHT[o['signal']['level']]} {money(o['price']['night'], o['price']['currency'])}/noite | "
                          f"{o['name']} {('★' * o['stars']) if o['stars'] else 's/ categoria'} | nota {o['rating']}{tags}{extra}")
