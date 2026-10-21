@@ -1,7 +1,7 @@
 # OpenClaw · Flight Search
 
 Skill de **pesquisa de voos** para agentes autônomos [OpenClaw](https://docs.openclaw.ai).
-O agente busca, compara e resume ofertas — **não reserva nem compra** (decisão de segurança: compra fica com o humano).
+O agente busca, compara e resume ofertas, **monitora preços** com alertas e — só se você habilitar — **reserva via Duffel com aprovação explícita** do usuário.
 
 - Python 3.9+ só com biblioteca padrão (nada a instalar)
 - Provedores plugáveis: **Duffel** (API de distribuição aérea, ofertas reserváveis), **SerpApi** (Google Flights) e **mock** (dados fictícios para testes)
@@ -77,14 +77,62 @@ GRU→LIS · ida e volta 2026-11-10/2026-11-20 · 2 adulto(s) · economy · duff
 
 Horários são **locais** de cada aeroporto. Preço é o **total** para todos os passageiros.
 
+## Monitor de preço
+
+```bash
+python3 $S watch add --target-price 3000 --drop-percent 10 -- --from GRU --to LIS --depart 2026-11-10 --return 2026-11-20
+python3 $S watch check --format text     # "Nenhum alerta (...)" ou linhas "ALERTA ..."
+```
+
+O estado fica em `~/.local/state/openclaw-flight-search/watches.json` (`FLIGHTS_STATE_DIR` muda o local).
+Quem dispara o `watch check` periodicamente é o **cron do OpenClaw**. Exemplo (confira as flags com `openclaw cron add --help` na sua versão):
+
+```bash
+openclaw cron add \
+  --name "Monitor de voos" \
+  --cron "0 */6 * * *" --tz America/Sao_Paulo \
+  --session isolated \
+  --message "Use a skill flight-search: rode 'watch check --format text'. Se houver ALERTA, me envie um resumo curto; se não, não envie nada."
+```
+
+Cada verificação faz uma busca por monitor (sem cache). No SerpApi isso consome cota: 4 checagens/dia × N monitores.
+
+## Reserva (opcional, desligada por padrão)
+
+Fluxo em duas etapas, só com Duffel:
+
+1. `book prepare --offer-id off_... --passengers-file pax.json` → consulta o preço **atual** da oferta, valida os passageiros e devolve um resumo + **código de aprovação de 6 dígitos** (válido por 30 min ou até a oferta expirar).
+2. O agente mostra o resumo e o código; o usuário responde com o código.
+3. `book confirm --booking-id bk_... --approval-code 123456` → confere o código, **consulta o preço de novo e aborta se mudou**, e emite o pedido pago com saldo Duffel (`balance`). O POST não tem novas tentativas automáticas, para evitar emissão duplicada.
+
+Travas que **não dependem do agente** (variáveis de ambiente, controladas por você):
+
+| Variável | Efeito |
+|---|---|
+| `FLIGHTS_BOOKING_ENABLED=1` | Sem ela, `book` sempre falha com `booking_disabled` |
+| `FLIGHTS_ALLOW_LIVE_BOOKING=1` | Sem ela, tokens `duffel_live_...` são bloqueados → só modo teste (nenhum bilhete real) |
+| `FLIGHTS_MAX_BOOKING_AMOUNT=5000` | Teto por reserva, checado no prepare e no confirm |
+
+Outras proteções: 3 códigos errados cancelam a reserva pendente; uma reserva não pode ser confirmada duas vezes; depois da emissão, data de nascimento, e-mail e telefone são apagados do estado local (ficam só os nomes, o localizador e o id do pedido). Arquivos de estado são criados com permissão `600`.
+
+> **Limitação honesta:** o código de aprovação aparece na saída que o próprio agente lê. Ele garante que o usuário **viu o resumo e confirmou**, mas não impede, tecnicamente, um agente que desobedeça a `SKILL.md`. As garantias rígidas são as variáveis acima. Para emitir bilhetes reais, recomendo também exigir aprovação manual do comando `book confirm` nas aprovações de execução (exec approvals) do OpenClaw e manter um teto baixo.
+
+Exemplo de `pax.json`:
+
+```json
+[
+  {"given_name": "Ana", "family_name": "Silva", "born_on": "1990-05-01", "gender": "f", "title": "ms",
+   "email": "ana@example.com", "phone_number": "+5511999998888"}
+]
+```
+
 ## Testes
 
 ```bash
-python3 -m unittest discover -s tests -v   # offline, respostas dos provedores simuladas
+python3 -m unittest discover -s tests -v   # offline: toda chamada HTTP é simulada
 ```
 
 ## Próximos passos possíveis
 
-- Reserva via Duffel Orders com etapa de **aprovação humana** obrigatória
-- Monitor de preço (cron do OpenClaw + alerta quando cair abaixo de X)
 - Servidor MCP expondo as mesmas funções como ferramentas
+- Assentos e bagagem extra na reserva (serviços adicionais da Duffel)

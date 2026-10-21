@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import random
+import secrets
 import re
 import sys
 import time
@@ -27,7 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 USER_AGENT = f"openclaw-flight-search/{VERSION}"
 HTTP_TIMEOUT = 45
 MAX_FLEX_DAYS = 3
@@ -451,6 +452,9 @@ def validate(a: argparse.Namespace) -> dict:
         raise FlightSearchError("Idades de crianças devem estar entre 2 e 17 (bebês: --infants).", "invalid_request")
     if a.adults < 1 or a.adults + len(children) + a.infants > 9 or a.infants > a.adults:
         raise FlightSearchError("Passageiros: mínimo 1 adulto, máximo 9 no total, no máximo 1 bebê por adulto.", "invalid_request")
+    for val in (a.depart_after, a.depart_before):
+        if val and not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", val):
+            raise FlightSearchError(f"Horário inválido: {val} (use HH:MM).", "invalid_request")
     if not 0 <= a.flex_days <= MAX_FLEX_DAYS:
         raise FlightSearchError(f"--flex-days deve estar entre 0 e {MAX_FLEX_DAYS}.", "invalid_request")
     return {
@@ -577,6 +581,342 @@ def cmd_airports(a: argparse.Namespace) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Estado persistente (monitores e reservas pendentes)
+
+
+def state_dir() -> str:
+    return os.environ.get("FLIGHTS_STATE_DIR") or os.path.join(os.path.expanduser("~"), ".local", "state", "openclaw-flight-search")
+
+
+def load_state(name: str, default):
+    try:
+        with open(os.path.join(state_dir(), name), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def save_state(name: str, data) -> None:
+    os.makedirs(state_dir(), mode=0o700, exist_ok=True)
+    path = os.path.join(state_dir(), name)
+    tmp = path + ".tmp"
+    with open(os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+
+
+def parse_search_argv(argv: list) -> argparse.Namespace:
+    try:
+        args = build_parser().parse_args(["search", *argv])
+    except SystemExit:
+        raise FlightSearchError("Parâmetros de busca inválidos para o monitor (veja 'search --help').", "invalid_request") from None
+    validate(args)
+    return args
+
+
+# ---------------------------------------------------------------------------
+# Monitor de preço. O agendamento fica com o cron do OpenClaw, que roda 'watch check'.
+
+WATCHES_FILE = "watches.json"
+MAX_HISTORY = 60
+
+
+def cmd_watch_add(a: argparse.Namespace) -> dict:
+    argv = [x for x in a.search_args if x != "--"]
+    sargs = parse_search_argv(argv)
+    if a.target_price is None and a.drop_percent is None:
+        raise FlightSearchError("Informe --target-price e/ou --drop-percent.", "invalid_request")
+    watches = load_state(WATCHES_FILE, [])
+    watch = {
+        "id": "w_" + secrets.token_hex(3),
+        "label": a.label or f"{sargs.origin.upper()}→{sargs.destination.upper()} {sargs.depart}" + (f"/{sargs.return_date}" if sargs.return_date else ""),
+        "search_args": argv,
+        "target_price": a.target_price,
+        "drop_percent": a.drop_percent,
+        "created_at": now_iso(),
+        "status": "active",
+        "last_price": None,
+        "best_price": None,
+        "last_alert_price": None,
+        "history": [],
+    }
+    watches.append(watch)
+    save_state(WATCHES_FILE, watches)
+    return {"kind": "watch_added", "watch": watch}
+
+
+def cmd_watch_list(a: argparse.Namespace) -> dict:
+    watches = load_state(WATCHES_FILE, [])
+    return {"kind": "watch_list", "count": len(watches), "watches": [{k: v for k, v in w.items() if k != "history"} for w in watches]}
+
+
+def cmd_watch_remove(a: argparse.Namespace) -> dict:
+    watches = load_state(WATCHES_FILE, [])
+    kept = [w for w in watches if w["id"] != a.watch_id]
+    if len(kept) == len(watches):
+        raise FlightSearchError(f"Monitor não encontrado: {a.watch_id}.", "not_found")
+    save_state(WATCHES_FILE, kept)
+    return {"kind": "watch_removed", "id": a.watch_id}
+
+
+def cmd_watch_check(a: argparse.Namespace) -> dict:
+    watches = load_state(WATCHES_FILE, [])
+    alerts, checked, errors = [], [], []
+    today = dt.date.today().isoformat()
+    for w in watches:
+        if w["status"] != "active" or (a.watch_id and w["id"] != a.watch_id):
+            continue
+        sargs = build_parser().parse_args(["search", *w["search_args"], "--no-cache", "--limit", "3"])
+        if sargs.depart < today:
+            w["status"] = "expired"
+            continue
+        try:
+            res = cmd_search(sargs)
+        except FlightSearchError as e:
+            errors.append({"id": w["id"], "label": w["label"], "code": e.code, "message": str(e)})
+            continue
+        price = (res.get("summary") or {}).get("cheapest")
+        checked.append({"id": w["id"], "label": w["label"], "price": price})
+        if price is None:
+            continue
+        currency = res["summary"]["currency"]
+        previous = w["last_price"]
+        reason = None
+        if w["target_price"] is not None and price <= w["target_price"] and (w["last_alert_price"] is None or price < w["last_alert_price"]):
+            reason = "target_reached"
+        elif w["drop_percent"] is not None and previous and price <= previous * (1 - w["drop_percent"] / 100):
+            reason = "price_drop"
+        if reason:
+            w["last_alert_price"] = price
+            alerts.append({
+                "id": w["id"], "label": w["label"], "reason": reason, "price": price, "currency": currency,
+                "previous_price": previous, "target_price": w["target_price"], "best_price_seen": w["best_price"],
+                "top_offers": res["offers"],
+            })
+        w["last_price"] = price
+        w["best_price"] = price if w["best_price"] is None else min(w["best_price"], price)
+        w["last_checked_at"] = now_iso()
+        w["history"] = (w["history"] + [{"at": w["last_checked_at"], "price": price}])[-MAX_HISTORY:]
+    save_state(WATCHES_FILE, watches)
+    return {"kind": "watch_check", "alerts": alerts, "checked": checked, "errors": errors}
+
+
+# ---------------------------------------------------------------------------
+# Reserva (Duffel). Desligada por padrão; fluxo em duas etapas com aprovação humana:
+#   book prepare  -> confere preço atual, guarda a reserva pendente e gera um código
+#   book confirm  -> só com o código que o usuário repetiu; aborta se o preço mudou
+
+BOOKINGS_FILE = "bookings.json"
+APPROVAL_TTL_MINUTES = 30
+PASSENGER_FIELDS = ("given_name", "family_name", "born_on", "gender", "title", "email", "phone_number")
+
+
+def duffel_headers() -> dict:
+    token = os.environ.get("DUFFEL_ACCESS_TOKEN")
+    if not token:
+        raise FlightSearchError("Defina DUFFEL_ACCESS_TOKEN para reservar.", "missing_credentials")
+    return {"Authorization": f"Bearer {token}", "Duffel-Version": "v2"}
+
+
+def booking_guard(amount: float | None = None) -> None:
+    if os.environ.get("FLIGHTS_BOOKING_ENABLED") != "1":
+        raise FlightSearchError("Reserva desativada. O dono do agente precisa definir FLIGHTS_BOOKING_ENABLED=1.", "booking_disabled")
+    token = os.environ.get("DUFFEL_ACCESS_TOKEN", "")
+    if token.startswith("duffel_live") and os.environ.get("FLIGHTS_ALLOW_LIVE_BOOKING") != "1":
+        raise FlightSearchError("Token de produção bloqueado para reserva. Defina FLIGHTS_ALLOW_LIVE_BOOKING=1 para emitir bilhetes reais.", "live_booking_blocked")
+    limit = os.environ.get("FLIGHTS_MAX_BOOKING_AMOUNT")
+    if amount is not None and limit:
+        try:
+            limit_value = float(limit)
+        except ValueError:
+            raise FlightSearchError(f"FLIGHTS_MAX_BOOKING_AMOUNT inválido: {limit}.", "invalid_request") from None
+        if amount > limit_value:
+            raise FlightSearchError(f"Valor {amount:.2f} acima do limite FLIGHTS_MAX_BOOKING_AMOUNT={limit}.", "over_limit")
+
+
+def validate_passenger(p: dict, index: int) -> dict:
+    missing = [f for f in PASSENGER_FIELDS if not str(p.get(f) or "").strip()]
+    if missing:
+        raise FlightSearchError(f"Passageiro {index + 1}: faltam {', '.join(missing)}.", "invalid_request")
+    clean = {f: str(p[f]).strip() for f in PASSENGER_FIELDS}
+    try:
+        dt.date.fromisoformat(clean["born_on"])
+    except ValueError:
+        raise FlightSearchError(f"Passageiro {index + 1}: born_on deve ser AAAA-MM-DD.", "invalid_request") from None
+    clean["gender"] = clean["gender"].lower()
+    clean["title"] = clean["title"].lower()
+    if clean["gender"] not in ("m", "f"):
+        raise FlightSearchError(f"Passageiro {index + 1}: gender deve ser 'm' ou 'f'.", "invalid_request")
+    if clean["title"] not in ("mr", "ms", "mrs", "miss", "dr"):
+        raise FlightSearchError(f"Passageiro {index + 1}: title deve ser mr, ms, mrs, miss ou dr.", "invalid_request")
+    if not re.fullmatch(r"\+\d{8,15}", clean["phone_number"]):
+        raise FlightSearchError(f"Passageiro {index + 1}: phone_number no formato internacional, ex.: +5511999998888.", "invalid_request")
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", clean["email"]):
+        raise FlightSearchError(f"Passageiro {index + 1}: e-mail inválido.", "invalid_request")
+    return clean
+
+
+def fetch_offer(offer_id: str) -> dict:
+    if not re.fullmatch(r"off_[A-Za-z0-9]+", offer_id or ""):
+        raise FlightSearchError("offer_id inválido (esperado off_...). Reserva só funciona com ofertas da Duffel.", "invalid_request")
+    resp = http_json("GET", f"https://api.duffel.com/air/offers/{offer_id}", duffel_headers())
+    return resp.get("data") or {}
+
+
+def cmd_book_prepare(a: argparse.Namespace) -> dict:
+    booking_guard()
+    try:
+        with open(a.passengers_file, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError) as e:
+        raise FlightSearchError(f"Não consegui ler {a.passengers_file}: {e}", "invalid_request") from None
+    if not isinstance(raw, list) or not raw:
+        raise FlightSearchError("O arquivo de passageiros deve ser uma lista JSON.", "invalid_request")
+    passengers = [validate_passenger(p, i) for i, p in enumerate(raw)]
+
+    offer = fetch_offer(a.offer_id)
+    offer_pax = offer.get("passengers") or []
+    if len(offer_pax) != len(passengers):
+        raise FlightSearchError(
+            f"A oferta tem {len(offer_pax)} passageiro(s) e o arquivo tem {len(passengers)}. "
+            f"Ordem esperada: {[p.get('type') or ('child, ' + str(p.get('age')) + ' anos') for p in offer_pax]}.",
+            "invalid_request",
+        )
+    amount = float(offer["total_amount"])
+    booking_guard(amount)
+
+    adults = [i for i, p in enumerate(offer_pax) if p.get("type") == "adult"]
+    infants = [i for i, p in enumerate(offer_pax) if (p.get("type") or "").startswith("infant")]
+    payload_pax = []
+    for p, op in zip(passengers, offer_pax):
+        payload_pax.append({**p, "id": op["id"]})
+    for adult_idx, infant_idx in zip(adults, infants):
+        payload_pax[adult_idx]["infant_passenger_id"] = offer_pax[infant_idx]["id"]
+
+    expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=APPROVAL_TTL_MINUTES)
+    offer_exp = offer.get("expires_at")
+    if offer_exp:
+        try:
+            expires = min(expires, dt.datetime.fromisoformat(offer_exp.replace("Z", "+00:00")))
+        except ValueError:
+            pass
+    booking = {
+        "id": "bk_" + secrets.token_hex(4),
+        "status": "pending_approval",
+        "offer_id": offer["id"],
+        "amount": offer["total_amount"],
+        "currency": offer["total_currency"],
+        "passengers": payload_pax,
+        "approval_code": f"{secrets.randbelow(10**6):06d}",
+        "created_at": now_iso(),
+        "expires_at": expires.replace(microsecond=0).isoformat(),
+        "summary": normalize_duffel(offer),
+    }
+    bookings = load_state(BOOKINGS_FILE, [])
+    bookings.append(booking)
+    save_state(BOOKINGS_FILE, bookings)
+    return {
+        "kind": "booking_prepared",
+        "booking_id": booking["id"],
+        "approval_code": booking["approval_code"],
+        "expires_at": booking["expires_at"],
+        "price": {"amount": amount, "currency": booking["currency"]},
+        "passengers": [f"{p['given_name']} {p['family_name']}" for p in passengers],
+        "offer": booking["summary"],
+        "instructions": "Mostre o resumo ao usuário e peça que ele responda com o código de aprovação. "
+                        "Só execute 'book confirm' se o usuário repetir o código em uma mensagem própria.",
+    }
+
+
+def cmd_book_confirm(a: argparse.Namespace) -> dict:
+    booking_guard()
+    bookings = load_state(BOOKINGS_FILE, [])
+    booking = next((b for b in bookings if b["id"] == a.booking_id), None)
+    if not booking:
+        raise FlightSearchError(f"Reserva pendente não encontrada: {a.booking_id}.", "not_found")
+    if booking["status"] != "pending_approval":
+        raise FlightSearchError(f"Reserva {a.booking_id} está com status '{booking['status']}'.", "invalid_state")
+    if dt.datetime.now(dt.timezone.utc) > dt.datetime.fromisoformat(booking["expires_at"]):
+        booking["status"] = "expired"
+        save_state(BOOKINGS_FILE, bookings)
+        raise FlightSearchError("Aprovação expirada. Busque e prepare de novo.", "expired")
+    if not secrets.compare_digest(str(a.approval_code).strip(), booking["approval_code"]):
+        booking["failed_attempts"] = booking.get("failed_attempts", 0) + 1
+        if booking["failed_attempts"] >= 3:
+            booking["status"] = "cancelled"
+        save_state(BOOKINGS_FILE, bookings)
+        raise FlightSearchError("Código de aprovação incorreto.", "approval_mismatch")
+
+    offer = fetch_offer(booking["offer_id"])
+    if (offer.get("total_amount"), offer.get("total_currency")) != (booking["amount"], booking["currency"]):
+        booking["status"] = "price_changed"
+        save_state(BOOKINGS_FILE, bookings)
+        raise FlightSearchError(
+            f"Preço mudou de {booking['currency']} {booking['amount']} para {offer.get('total_currency')} {offer.get('total_amount')}. "
+            "Nada foi reservado; prepare novamente e peça nova aprovação.",
+            "price_changed",
+        )
+    booking_guard(float(booking["amount"]))
+
+    body = {"data": {
+        "type": "instant",
+        "selected_offers": [booking["offer_id"]],
+        "payments": [{"type": "balance", "currency": booking["currency"], "amount": booking["amount"]}],
+        "passengers": booking["passengers"],
+    }}
+    booking["status"] = "submitting"
+    save_state(BOOKINGS_FILE, bookings)
+    try:
+        # sem novas tentativas: repetir um POST de pedido pode emitir dois bilhetes
+        order = http_json("POST", "https://api.duffel.com/air/orders", duffel_headers(), body, retries=0).get("data") or {}
+    except FlightSearchError:
+        booking["status"] = "failed"
+        save_state(BOOKINGS_FILE, bookings)
+        raise
+    booking.update({
+        "status": "booked",
+        "order_id": order.get("id"),
+        "booking_reference": order.get("booking_reference"),
+        "booked_at": now_iso(),
+        # dados pessoais não ficam guardados depois da emissão
+        "passengers": [{"given_name": p["given_name"], "family_name": p["family_name"]} for p in booking["passengers"]],
+        "approval_code": None,
+    })
+    save_state(BOOKINGS_FILE, bookings)
+    return {
+        "kind": "booking_confirmed",
+        "booking_id": booking["id"],
+        "order_id": booking["order_id"],
+        "booking_reference": booking["booking_reference"],
+        "price": {"amount": float(booking["amount"]), "currency": booking["currency"]},
+        "passengers": [f"{p['given_name']} {p['family_name']}" for p in booking["passengers"]],
+        "test_mode": not os.environ.get("DUFFEL_ACCESS_TOKEN", "").startswith("duffel_live"),
+    }
+
+
+def cmd_book_cancel(a: argparse.Namespace) -> dict:
+    bookings = load_state(BOOKINGS_FILE, [])
+    booking = next((b for b in bookings if b["id"] == a.booking_id), None)
+    if not booking:
+        raise FlightSearchError(f"Reserva não encontrada: {a.booking_id}.", "not_found")
+    if booking["status"] != "pending_approval":
+        raise FlightSearchError(f"Só reservas pendentes podem ser descartadas aqui (status: {booking['status']}).", "invalid_state")
+    booking.update({"status": "cancelled", "passengers": [], "approval_code": None})
+    save_state(BOOKINGS_FILE, bookings)
+    return {"kind": "booking_cancelled", "booking_id": a.booking_id}
+
+
+def cmd_book_list(a: argparse.Namespace) -> dict:
+    bookings = load_state(BOOKINGS_FILE, [])
+    fields = ("id", "status", "offer_id", "amount", "currency", "created_at", "expires_at", "order_id", "booking_reference")
+    return {"kind": "booking_list", "bookings": [{k: b.get(k) for k in fields} for b in bookings]}
+
+
+# ---------------------------------------------------------------------------
 # Saída em texto compacto (economiza tokens do agente)
 
 
@@ -598,7 +938,59 @@ def describe_slice(s: dict) -> str:
     return f"{s['origin']}→{s['destination']} {(s['departure'] or '')[:10]} {dep}→{arr}{days} {fmt_minutes(s['duration_minutes'])} {stops} [{flights}]"
 
 
+def watch_text(result: dict) -> str:
+    kind = result["kind"]
+    if kind == "watch_added":
+        w = result["watch"]
+        rules = ([f"alvo {w['target_price']:g}"] if w["target_price"] is not None else []) + ([f"queda ≥ {w['drop_percent']:g}%"] if w["drop_percent"] is not None else [])
+        return f"Monitor {w['id']} criado: {w['label']} · {' · '.join(rules)}"
+    if kind == "watch_removed":
+        return f"Monitor {result['id']} removido."
+    if kind == "watch_list":
+        return "\n".join(
+            f"{w['id']} [{w['status']}] {w['label']} · alvo {w['target_price']} · último {w['last_price']} · melhor {w['best_price']}"
+            for w in result["watches"]
+        ) or "Nenhum monitor."
+    lines = []
+    for al in result["alerts"]:
+        why = "atingiu o alvo" if al["reason"] == "target_reached" else f"caiu de {money(al['previous_price'], al['currency'])}"
+        lines.append(f"ALERTA {al['id']} {al['label']}: {money(al['price'], al['currency'])} ({why})")
+        for i, o in enumerate(al["top_offers"], 1):
+            lines.append(f"  {i}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(x for x in o['airlines'] if x)} | "
+                         + " || ".join(describe_slice(s) for s in o["slices"]) + f" | id={o['id']}")
+    for e in result["errors"]:
+        lines.append(f"erro {e['id']} {e['label']}: {e['message']}")
+    if not result["alerts"]:
+        lines.insert(0, f"Nenhum alerta ({len(result['checked'])} monitor(es) verificado(s)).")
+    return "\n".join(lines)
+
+
+def booking_text(result: dict) -> str:
+    kind = result["kind"]
+    if kind == "booking_prepared":
+        o = result["offer"]
+        return "\n".join([
+            f"Reserva {result['booking_id']} PENDENTE de aprovação (expira {result['expires_at']})",
+            f"Total: {money(result['price']['amount'], result['price']['currency'])} · {', '.join(a for a in o['airlines'] if a)}",
+            *(f"  {describe_slice(s)}" for s in o["slices"]),
+            f"Passageiros: {', '.join(result['passengers'])}",
+            f"Código de aprovação: {result['approval_code']}",
+            result["instructions"],
+        ])
+    if kind == "booking_confirmed":
+        mode = " (MODO TESTE — nenhum bilhete real)" if result["test_mode"] else ""
+        return (f"Reserva confirmada{mode}: localizador {result['booking_reference']} · pedido {result['order_id']} · "
+                f"{money(result['price']['amount'], result['price']['currency'])} · {', '.join(result['passengers'])}")
+    if kind == "booking_cancelled":
+        return f"Reserva pendente {result['booking_id']} descartada."
+    return "\n".join(f"{b['id']} [{b['status']}] {b['currency']} {b['amount']} · {b['booking_reference'] or b['offer_id']}" for b in result["bookings"]) or "Nenhuma reserva."
+
+
 def to_text(result: dict) -> str:
+    if result.get("kind", "").startswith("watch"):
+        return watch_text(result)
+    if result.get("kind", "").startswith("booking"):
+        return booking_text(result)
     if "airports" in result:
         return "\n".join(f"{x['iata']} — {x['city']} ({x['name']}, {x['country']})" for x in result["airports"]) or "Nenhum aeroporto encontrado."
     q = result["query"]
@@ -626,7 +1018,7 @@ def to_text(result: dict) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="flights.py", description="Pesquisa de voos (somente busca, sem reserva).")
+    p = argparse.ArgumentParser(prog="flights.py", description="Pesquisa e monitoramento de voos; reserva opcional com aprovação humana.")
     p.add_argument("--version", action="version", version=VERSION)
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -661,16 +1053,47 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--offline", action="store_true", help="Usar só a lista local")
     ap.add_argument("--format", choices=["json", "text"], default="json")
     ap.set_defaults(func=cmd_airports)
+
+    w = sub.add_parser("watch", help="Monitorar preços (rode 'watch check' periodicamente)")
+    wsub = w.add_subparsers(dest="watch_command", required=True)
+    wa = wsub.add_parser("add", help="Criar monitor: watch add --target-price 3000 -- --from GRU --to LIS --depart AAAA-MM-DD")
+    wa.add_argument("--target-price", type=float, help="Alertar quando o menor preço for ≤ este valor")
+    wa.add_argument("--drop-percent", type=float, help="Alertar quando cair ≥ N%% desde a última verificação")
+    wa.add_argument("--label")
+    wa.add_argument("search_args", nargs=argparse.REMAINDER, help="Argumentos do 'search' após '--'")
+    wa.set_defaults(func=cmd_watch_add)
+    wl = wsub.add_parser("list")
+    wl.set_defaults(func=cmd_watch_list)
+    wr = wsub.add_parser("remove")
+    wr.add_argument("watch_id")
+    wr.set_defaults(func=cmd_watch_remove)
+    wc = wsub.add_parser("check", help="Verificar monitores ativos e emitir alertas")
+    wc.add_argument("--id", dest="watch_id")
+    wc.set_defaults(func=cmd_watch_check)
+
+    b = sub.add_parser("book", help="Reserva Duffel com aprovação humana (desligada por padrão)")
+    bsub = b.add_subparsers(dest="book_command", required=True)
+    bp = bsub.add_parser("prepare", help="Conferir preço e gerar código de aprovação")
+    bp.add_argument("--offer-id", required=True)
+    bp.add_argument("--passengers-file", required=True, help="JSON: lista com given_name, family_name, born_on, gender, title, email, phone_number")
+    bp.set_defaults(func=cmd_book_prepare)
+    bc = bsub.add_parser("confirm", help="Emitir após o usuário repetir o código")
+    bc.add_argument("--booking-id", required=True)
+    bc.add_argument("--approval-code", required=True)
+    bc.set_defaults(func=cmd_book_confirm)
+    bx = bsub.add_parser("cancel", help="Descartar reserva pendente")
+    bx.add_argument("booking_id")
+    bx.set_defaults(func=cmd_book_cancel)
+    bl = bsub.add_parser("list")
+    bl.set_defaults(func=cmd_book_list)
+
+    for parser in (wa, wl, wr, wc, bp, bc, bx, bl):
+        parser.add_argument("--format", choices=["json", "text"], default="json")
     return p
 
 
 def main(argv: list | None = None) -> int:
     args = build_parser().parse_args(argv)
-    for opt in ("depart_after", "depart_before"):
-        val = getattr(args, opt, None)
-        if val and not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", val):
-            print(json.dumps({"error": {"code": "invalid_request", "message": f"Horário inválido: {val} (use HH:MM)"}}, ensure_ascii=False))
-            return 2
     try:
         result = args.func(args)
     except FlightSearchError as e:

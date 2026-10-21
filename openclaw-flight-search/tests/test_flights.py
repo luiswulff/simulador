@@ -98,10 +98,11 @@ def run(*argv):
 class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        env = {"FLIGHTS_CACHE_DIR": self.tmp.name}
+        env = {"FLIGHTS_CACHE_DIR": os.path.join(self.tmp.name, "cache"), "FLIGHTS_STATE_DIR": os.path.join(self.tmp.name, "state")}
         self.env = mock.patch.dict(os.environ, env, clear=False)
         self.env.start()
-        for k in ("DUFFEL_ACCESS_TOKEN", "SERPAPI_API_KEY", "FLIGHTS_PROVIDER"):
+        for k in ("DUFFEL_ACCESS_TOKEN", "SERPAPI_API_KEY", "FLIGHTS_PROVIDER", "FLIGHTS_BOOKING_ENABLED",
+                  "FLIGHTS_ALLOW_LIVE_BOOKING", "FLIGHTS_MAX_BOOKING_AMOUNT"):
             os.environ.pop(k, None)
 
     def tearDown(self):
@@ -220,6 +221,169 @@ class TestValidationAndMisc(Base):
         self.assertEqual({a["iata"] for a in res["airports"]}, {"GRU", "CGH"})
         _, res = run("airports", "lis", "--offline")
         self.assertEqual(res["airports"][0]["iata"], "LIS")
+
+
+def serp_with_price(price):
+    data = json.loads(json.dumps(SERPAPI_RESPONSE))
+    data["other_flights"][0]["price"] = price
+    data["best_flights"][0]["price"] = price + 100
+    return data
+
+
+class TestWatch(Base):
+    def test_alert_flow(self):
+        os.environ["SERPAPI_API_KEY"] = "k"
+        code, res = run("watch", "add", "--target-price", "300", "--drop-percent", "10", "--",
+                        "--from", "CGH", "--to", "SDU", "--depart", FUTURE)
+        self.assertEqual(code, 0)
+        wid = res["watch"]["id"]
+
+        def check(price):
+            with mock.patch.object(flights, "http_json", return_value=serp_with_price(price)):
+                return run("watch", "check")[1]
+
+        first = check(350)            # acima do alvo, sem histórico
+        self.assertEqual(first["alerts"], [])
+        self.assertEqual(first["checked"][0]["price"], 350.0)
+        drop = check(310)             # queda de 11%
+        self.assertEqual(drop["alerts"][0]["reason"], "price_drop")
+        hit = check(290)              # atingiu o alvo
+        self.assertEqual(hit["alerts"][0]["reason"], "target_reached")
+        self.assertEqual(len(hit["alerts"][0]["top_offers"]), 2)
+        again = check(290)            # mesmo preço: não repete
+        self.assertEqual(again["alerts"], [])
+        lower = check(250)            # mais barato ainda: alerta de novo
+        self.assertEqual(lower["alerts"][0]["reason"], "target_reached")
+
+        _, listing = run("watch", "list")
+        w = listing["watches"][0]
+        self.assertEqual((w["best_price"], w["last_price"]), (250.0, 250.0))
+        self.assertEqual(run("watch", "remove", wid)[0], 0)
+        self.assertEqual(run("watch", "list")[1]["count"], 0)
+
+    def test_invalid_watch(self):
+        code, res = run("watch", "add", "--target-price", "1", "--", "--from", "GRU", "--to", "XX", "--depart", FUTURE)
+        self.assertEqual(res["error"]["code"], "invalid_request")
+        code, res = run("watch", "add", "--", "--from", "GRU", "--to", "LIS", "--depart", FUTURE, "--provider", "mock")
+        self.assertEqual(res["error"]["code"], "invalid_request")
+
+
+OFFER = {
+    "id": "off_abc",
+    "total_amount": "1500.00",
+    "total_currency": "BRL",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "passengers": [{"id": "pas_1", "type": "adult"}, {"id": "pas_2", "type": "infant_without_seat"}],
+    "slices": DUFFEL_RESPONSE["data"]["offers"][0]["slices"],
+    "owner": {"name": "TAP Air Portugal"},
+}
+PAX = [
+    {"given_name": "Ana", "family_name": "Silva", "born_on": "1990-05-01", "gender": "f", "title": "ms",
+     "email": "ana@example.com", "phone_number": "+5511999998888"},
+    {"given_name": "Leo", "family_name": "Silva", "born_on": "2025-08-01", "gender": "m", "title": "mr",
+     "email": "ana@example.com", "phone_number": "+5511999998888"},
+]
+
+
+class FakeDuffel:
+    """Substitui http_json: nenhuma chamada sai para a rede."""
+
+    def __init__(self, price="1500.00"):
+        self.price = price
+        self.orders = []
+
+    def __call__(self, method, url, headers, body=None, retries=3):
+        if method == "GET" and "/air/offers/" in url:
+            return {"data": {**OFFER, "total_amount": self.price}}
+        if method == "POST" and url.endswith("/air/orders"):
+            assert retries == 0
+            self.orders.append(body)
+            return {"data": {"id": "ord_1", "booking_reference": "ABC123"}}
+        raise AssertionError(url)
+
+
+class TestBooking(Base):
+    def setUp(self):
+        super().setUp()
+        os.environ["DUFFEL_ACCESS_TOKEN"] = "duffel_test_x"
+        self.pax_file = os.path.join(self.tmp.name, "pax.json")
+        with open(self.pax_file, "w") as f:
+            json.dump(PAX, f)
+
+    def prepare(self, fake):
+        with mock.patch.object(flights, "http_json", fake):
+            return run("book", "prepare", "--offer-id", "off_abc", "--passengers-file", self.pax_file)
+
+    def confirm(self, fake, booking_id, code):
+        with mock.patch.object(flights, "http_json", fake):
+            return run("book", "confirm", "--booking-id", booking_id, "--approval-code", code)
+
+    @staticmethod
+    def wrong_code(code):
+        return "000000" if code != "000000" else "111111"
+
+    def test_disabled_by_default(self):
+        self.assertEqual(self.prepare(FakeDuffel())[1]["error"]["code"], "booking_disabled")
+
+    def test_live_token_blocked(self):
+        os.environ.update({"FLIGHTS_BOOKING_ENABLED": "1", "DUFFEL_ACCESS_TOKEN": "duffel_live_x"})
+        self.assertEqual(self.prepare(FakeDuffel())[1]["error"]["code"], "live_booking_blocked")
+
+    def test_over_limit(self):
+        os.environ.update({"FLIGHTS_BOOKING_ENABLED": "1", "FLIGHTS_MAX_BOOKING_AMOUNT": "1000"})
+        self.assertEqual(self.prepare(FakeDuffel())[1]["error"]["code"], "over_limit")
+
+    def test_happy_path(self):
+        os.environ["FLIGHTS_BOOKING_ENABLED"] = "1"
+        fake = FakeDuffel()
+        code, prep = self.prepare(fake)
+        self.assertEqual(code, 0, prep)
+        self.assertEqual(prep["price"], {"amount": 1500.0, "currency": "BRL"})
+        bid = prep["booking_id"]
+
+        self.assertEqual(self.confirm(fake, bid, self.wrong_code(prep["approval_code"]))[1]["error"]["code"], "approval_mismatch")
+        self.assertEqual(fake.orders, [])
+
+        code, res = self.confirm(fake, bid, prep["approval_code"])
+        self.assertEqual(code, 0, res)
+        self.assertEqual(res["booking_reference"], "ABC123")
+        self.assertTrue(res["test_mode"])
+        order = fake.orders[0]["data"]
+        self.assertEqual(order["payments"], [{"type": "balance", "currency": "BRL", "amount": "1500.00"}])
+        self.assertEqual(order["passengers"][0]["id"], "pas_1")
+        self.assertEqual(order["passengers"][0]["infant_passenger_id"], "pas_2")
+
+        # não confirma duas vezes, e dados pessoais foram apagados
+        self.assertEqual(self.confirm(fake, bid, prep["approval_code"])[1]["error"]["code"], "invalid_state")
+        with open(os.path.join(os.environ["FLIGHTS_STATE_DIR"], "bookings.json")) as f:
+            stored = f.read()
+        self.assertNotIn("1990-05-01", stored)
+        self.assertNotIn("+5511999998888", stored)
+
+    def test_price_changed_aborts(self):
+        os.environ["FLIGHTS_BOOKING_ENABLED"] = "1"
+        _, prep = self.prepare(FakeDuffel())
+        fake = FakeDuffel(price="1700.00")
+        self.assertEqual(self.confirm(fake, prep["booking_id"], prep["approval_code"])[1]["error"]["code"], "price_changed")
+        self.assertEqual(fake.orders, [])
+
+    def test_three_wrong_codes_cancel(self):
+        os.environ["FLIGHTS_BOOKING_ENABLED"] = "1"
+        fake = FakeDuffel()
+        _, prep = self.prepare(fake)
+        for _ in range(3):
+            self.confirm(fake, prep["booking_id"], self.wrong_code(prep["approval_code"]))
+        self.assertEqual(self.confirm(fake, prep["booking_id"], prep["approval_code"])[1]["error"]["code"], "invalid_state")
+        self.assertEqual(fake.orders, [])
+
+    def test_passenger_validation(self):
+        os.environ["FLIGHTS_BOOKING_ENABLED"] = "1"
+        with open(self.pax_file, "w") as f:
+            json.dump([{**PAX[0], "phone_number": "11 9999"}, PAX[1]], f)
+        self.assertEqual(self.prepare(FakeDuffel())[1]["error"]["code"], "invalid_request")
+        with open(self.pax_file, "w") as f:
+            json.dump(PAX[:1], f)
+        self.assertIn("2 passageiro", self.prepare(FakeDuffel())[1]["error"]["message"])
 
 
 if __name__ == "__main__":
