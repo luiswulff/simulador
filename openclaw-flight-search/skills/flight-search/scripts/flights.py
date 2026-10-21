@@ -28,7 +28,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 USER_AGENT = f"openclaw-flight-search/{VERSION}"
 HTTP_TIMEOUT = 45
 MAX_FLEX_DAYS = 3
@@ -134,7 +134,7 @@ def cache_key(provider: str, query: dict) -> str:
     return hashlib.sha256(json.dumps([provider, query], sort_keys=True).encode()).hexdigest()[:32]
 
 
-def cache_get(key: str) -> list | None:
+def cache_get(key: str) -> dict | None:
     path = os.path.join(cache_dir(), key + ".json")
     try:
         if time.time() - os.path.getmtime(path) > cache_ttl():
@@ -145,19 +145,20 @@ def cache_get(key: str) -> list | None:
         return None
 
 
-def cache_put(key: str, offers: list) -> None:
+def cache_put(key: str, entry: dict) -> None:
     try:
         os.makedirs(cache_dir(), exist_ok=True)
         tmp = os.path.join(cache_dir(), key + ".tmp")
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(offers, f)
+            json.dump(entry, f)
         os.replace(tmp, os.path.join(cache_dir(), key + ".json"))
     except OSError:
         pass
 
 
 # ---------------------------------------------------------------------------
-# Provedores. Cada um recebe a consulta normalizada e devolve ofertas normalizadas:
+# Provedores. Cada um recebe a consulta normalizada e devolve (ofertas, price_insights|None).
+# Ofertas normalizadas:
 # {id, provider, price:{amount,currency}, airlines[], slices[{origin,destination,
 #  departure,arrival,duration_minutes,stops,segments[]}], total_duration_minutes,
 #  checked_bags, refundable, changeable, booking{}}
@@ -180,7 +181,7 @@ def search_duffel(q: dict) -> list:
         data["max_connections"] = q["max_stops"]
     url = "https://api.duffel.com/air/offer_requests?return_offers=true&supplier_timeout=20000"
     resp = http_json("POST", url, {"Authorization": f"Bearer {token}", "Duffel-Version": "v2"}, {"data": data})
-    return [normalize_duffel(o) for o in resp.get("data", {}).get("offers", [])]
+    return [normalize_duffel(o) for o in resp.get("data", {}).get("offers", [])], None
 
 
 def normalize_duffel(offer: dict) -> dict:
@@ -249,11 +250,17 @@ def search_serpapi(q: dict) -> list:
     resp = http_json("GET", "https://serpapi.com/search.json?" + urllib.parse.urlencode(params), {})
     if resp.get("error"):
         if "hasn't returned any results" in resp["error"]:
-            return []
+            return [], None
         raise FlightSearchError(f"SerpApi: {resp['error']}", "provider_error")
     url = (resp.get("search_metadata") or {}).get("google_flights_url")
     items = (resp.get("best_flights") or []) + (resp.get("other_flights") or [])
-    return [normalize_serpapi(item, q, url, i) for i, item in enumerate(items)]
+    insights = resp.get("price_insights") or {}
+    summary = {
+        "level": insights.get("price_level"),  # low / typical / high, na avaliação do Google
+        "typical_range": insights.get("typical_price_range"),
+        "lowest_price": insights.get("lowest_price"),
+    } if insights else None
+    return [normalize_serpapi(item, q, url, i) for i, item in enumerate(items)], summary
 
 
 def normalize_serpapi(item: dict, q: dict, url: str | None, index: int) -> dict:
@@ -273,6 +280,7 @@ def normalize_serpapi(item: dict, q: dict, url: str | None, index: int) -> dict:
             "operating_carrier": None,
             "aircraft": f.get("airplane"),
             "duration_minutes": f.get("duration"),
+            "amenities": [e for e in f.get("extensions") or [] if not e.startswith("Carbon emissions")],
         })
     outbound = build_slice(segments, item.get("total_duration"))
     offer = {
@@ -331,7 +339,7 @@ def search_mock(q: dict) -> list:
             "checked_bags": rng.choice([0, 1]), "refundable": rng.random() < 0.3, "changeable": rng.random() < 0.6,
             "booking": {"note": "dados fictícios"},
         })
-    return offers
+    return offers, None
 
 
 PROVIDERS = {"duffel": search_duffel, "serpapi": search_serpapi, "mock": search_mock}
@@ -472,7 +480,7 @@ def cmd_search(a: argparse.Namespace) -> dict:
         raise FlightSearchError(f"Provedor desconhecido: {provider}. Opções: {', '.join(PROVIDERS)}.", "invalid_request")
 
     today = dt.date.today()
-    all_offers, by_date, errors = [], [], []
+    all_offers, by_date, errors, insights = [], [], [], None
     for shift in range(-a.flex_days, a.flex_days + 1):
         q = dict(base)
         d = dt.date.fromisoformat(base["depart"]) + dt.timedelta(days=shift)
@@ -482,23 +490,28 @@ def cmd_search(a: argparse.Namespace) -> dict:
         if base["return"]:
             q["return"] = (dt.date.fromisoformat(base["return"]) + dt.timedelta(days=shift)).isoformat()
         key = cache_key(provider, q)
-        offers = None if a.no_cache else cache_get(key)
-        cached = offers is not None
-        if offers is None:
+        entry = None if a.no_cache else cache_get(key)
+        cached = isinstance(entry, dict)
+        if not cached:
             try:
-                offers = PROVIDERS[provider](q)
+                offers, day_insights = PROVIDERS[provider](q)
             except FlightSearchError as e:
                 if a.flex_days == 0:
                     raise
                 errors.append({"depart": q["depart"], "code": e.code, "message": str(e)})
                 continue
-            cache_put(key, offers)
+            entry = {"offers": offers, "insights": day_insights}
+            cache_put(key, entry)
+        offers, day_insights = entry["offers"], entry.get("insights")
+        if shift == 0:
+            insights = day_insights
         for o in offers:
             o["search_dates"] = {"depart": q["depart"], "return": q["return"]}
         filtered = apply_filters(offers, a)
         if a.flex_days:
             cheapest = min((o["price"]["amount"] for o in filtered), default=None)
-            by_date.append({"depart": q["depart"], "return": q["return"], "cheapest": cheapest, "offers": len(filtered), "cached": cached})
+            by_date.append({"depart": q["depart"], "return": q["return"], "cheapest": cheapest, "offers": len(filtered), "cached": cached,
+                            "price_level": (day_insights or {}).get("level")})
         all_offers.extend(filtered)
 
     ranked = sort_offers(all_offers, a.sort)
@@ -517,6 +530,8 @@ def cmd_search(a: argparse.Namespace) -> dict:
             "direct_available": any(all(s["stops"] == 0 for s in o["slices"]) for o in ranked),
             "currency": ranked[0]["price"]["currency"],
         }
+    if insights:
+        result["price_insights"] = insights
     if by_date:
         result["by_date"] = by_date
     if errors:
@@ -999,6 +1014,12 @@ def to_text(result: dict) -> str:
     lines = [f"{q['origin']}→{q['destination']} · {trip} · {pax} · {q['cabin']} · {q['provider']} · {result['count']} ofertas (mostrando {result['returned']})"]
     if result.get("warning"):
         lines.append("⚠ " + result["warning"])
+    pi = result.get("price_insights")
+    if pi and pi.get("level"):
+        level = {"low": "BAIXO", "typical": "típico", "high": "ALTO"}.get(pi["level"], pi["level"])
+        rng = pi.get("typical_range") or []
+        typical = f"; faixa típica {money(rng[0], q['currency'])}–{money(rng[1], q['currency'])}" if len(rng) == 2 else ""
+        lines.append(f"Avaliação do Google: preço {level}{typical}")
     for i, o in enumerate(result["offers"], 1):
         extras = []
         if o["checked_bags"] is not None:
@@ -1008,7 +1029,8 @@ def to_text(result: dict) -> str:
         lines.append(f"{i}. {money(o['price']['amount'], o['price']['currency'])} | {', '.join(a for a in o['airlines'] if a)} | " + " || ".join(describe_slice(s) for s in o["slices"]) + (f" | {', '.join(extras)}" if extras else "") + f" | id={o['id']}")
     for d in result.get("by_date", []):
         cheapest = money(d["cheapest"], q["currency"]) if d["cheapest"] is not None else "—"
-        lines.append(f"  data {d['depart']}{'/' + d['return'] if d['return'] else ''}: menor {cheapest} ({d['offers']} ofertas)")
+        level = f", preço {d['price_level']}" if d.get("price_level") else ""
+        lines.append(f"  data {d['depart']}{'/' + d['return'] if d['return'] else ''}: menor {cheapest} ({d['offers']} ofertas{level})")
     for e in result.get("errors", []):
         lines.append(f"  erro em {e['depart']}: {e['message']}")
     return "\n".join(lines)

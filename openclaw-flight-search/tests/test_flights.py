@@ -52,6 +52,7 @@ DUFFEL_RESPONSE = {
 
 SERPAPI_RESPONSE = {
     "search_metadata": {"google_flights_url": "https://www.google.com/travel/flights?x"},
+    "price_insights": {"lowest_price": 350, "price_level": "low", "typical_price_range": [400, 900], "price_history": [[1, 2]]},
     "best_flights": [
         {
             "flights": [
@@ -62,6 +63,7 @@ SERPAPI_RESPONSE = {
                     "airline": "LATAM",
                     "flight_number": "LA 3000",
                     "airplane": "Airbus A320",
+                    "extensions": ["Average legroom (76 cm)", "Wi-Fi for a fee", "Carbon emissions estimate: 68 kg"],
                 }
             ],
             "total_duration": 65,
@@ -170,8 +172,10 @@ class TestSerpApi(Base):
         self.assertIn("engine=google_flights", http.call_args.args[1])
         self.assertEqual([o["price"]["amount"] for o in res["offers"]], [350.0, 489.0])
         self.assertEqual(res["offers"][0]["slices"][0]["stops"], 1)
+        self.assertEqual(res["offers"][1]["slices"][0]["segments"][0]["amenities"], ["Average legroom (76 cm)", "Wi-Fi for a fee"])
         self.assertEqual(res["summary"]["fastest_minutes"], 65)
         self.assertTrue(res["summary"]["direct_available"])
+        self.assertEqual(res["price_insights"], {"level": "low", "typical_range": [400, 900], "lowest_price": 350})
 
         with mock.patch.object(flights, "http_json", return_value=SERPAPI_RESPONSE):
             _, direct = run("search", "--from", "CGH", "--to", "SDU", "--depart", FUTURE, "--max-stops", "0", "--no-cache")

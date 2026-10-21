@@ -28,7 +28,7 @@ Script: `python3 {baseDir}/scripts/flights.py` (somente biblioteca padrão, sem 
    ```
    python3 {baseDir}/scripts/flights.py search --from GRU --to LIS --depart 2026-11-10 --return 2026-11-20 --adults 2 --format text
    ```
-4. **Responder.** Apresente as 3–5 melhores opções: preço total, cia, horários (locais), duração, escalas, bagagem, e o trade-off (mais barato × mais rápido × direto). Diga o provedor e que preços mudam a qualquer momento.
+4. **Responder.** Se houver `price_insights` (SerpApi), diga se o Google considera o preço baixo/típico/alto e a faixa típica — isso ajuda o usuário a decidir se compra agora ou cria um monitor. Apresente as 3–5 melhores opções: preço total, cia, horários (locais), duração, escalas, bagagem, e o trade-off (mais barato × mais rápido × direto). Diga o provedor e que preços mudam a qualquer momento.
 
 ## Opções de `search`
 
