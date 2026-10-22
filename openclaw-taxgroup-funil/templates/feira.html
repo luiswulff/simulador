@@ -1,0 +1,149 @@
+{% from "_macros.html" import head, footer, header_slim with context %}
+{{ head("Captação em Feira", "feira.css") }}
+<body>
+{% set fonte = 'Capturas via WhatsApp · CRM: ' ~ fonte_crm %}
+{% set off = 0 if so_lista else 1 %}
+
+{% if not so_lista %}
+<!-- ====================== PÁGINA 1 — DASHBOARD ====================== -->
+<section class="page">
+<header class="hdr">
+  <img src="{{ logo_w }}" alt="{{ marca }}"><div class="sep"></div>
+  <div><h1>Captação em Feira</h1><div class="sub">{{ ev.nome }}{% if ev.local %} &nbsp;·&nbsp; {{ ev.local }}{% endif %}</div></div>
+  <div class="meta"><span class="tag">Feira / Evento</span><br>Período: <b>{{ periodo }}</b><br>Atualizado em <b>{{ atualizado }}</b></div>
+</header>
+<div class="wrap">
+  <section class="kpis">
+    <div class="kpi"><div class="l">Contatos captados</div><div class="v">{{ m.n }}</div><div class="d">{{ m.empresas }} empresas únicas</div></div>
+    <div class="kpi"><div class="l">Leads quentes</div><div class="v">{{ m.temps[0].n }}</div><div class="d">{{ m.temps[0].p }}% das capturas</div></div>
+    <div class="kpi hl"><div class="l">Reuniões agendadas</div><div class="v">{{ m.meet }}</div><div class="d">{{ (100*m.meet/m.n)|round|int if m.n else 0 }}% dos contatos</div></div>
+    <div class="kpi"><div class="l">Vendedores ativos</div><div class="v">{{ m.sellers|length }}</div><div class="d">média {{ m.media }} capturas/pessoa</div></div>
+    <div class="kpi"><div class="l">Horário de pico</div><div class="v">{{ m.peak_h }}h–{{ m.peak_h+1 }}h</div><div class="d">{% if m.dias|length > 1 %}melhor dia: {{ m.dias[m.best_day].strftime('%d/%m') }} ({{ m.by_day[m.best_day] }}){% else %}{{ m.n }} capturas no dia{% endif %}</div></div>
+    <div class="kpi"><div class="l">Enviados ao CRM</div><div class="v">{{ m.crm.enviados }}</div><div class="d">{{ m.crm.pct }} sincronizados{% if m.crm.erros %} · {{ m.crm.erros }} com erro{% endif %}</div></div>
+  </section>
+
+  <section class="dash">
+    <div>
+      <div class="sec-t">Ranking dos vendedores <span>pontuação: captura {{ PTS.captura }} pt · quente +{{ PTS.quente }} · reunião +{{ PTS.reuniao }}</span></div>
+      {% set S = m.sellers %}
+      {% set podio = [(S[1], 'p2', '#9AA4B8') if S|length > 1 else none, (S[0], 'p1', '#D4A62A'), (S[2], 'p3', '#B87A4B') if S|length > 2 else none] %}
+      <div class="podium">
+        {% for item in podio %}{% if item %}{% set s, cls, mc = item %}
+        <div class="pd {{ cls }}">
+          <div class="av">{{ s.ini }}<span class="md" style="background:{{ mc }}">{{ s.rank }}º</span></div>
+          <div class="nm">{{ s.name }}</div><div class="rl">{{ s.role or '&nbsp;'|safe }}</div>
+          <div class="pt">{{ s.pts }}<small>pts</small></div>
+          <div class="ss"><span><b>{{ s.n }}</b> capt.</span><span><b>{{ s.quentes }}</b> quentes</span><span><b>{{ s.reunioes }}</b> reuniões</span></div>
+        </div>
+        {% else %}<div></div>{% endif %}{% endfor %}
+      </div>
+      <table class="rkt">
+        <thead><tr><th></th><th>Vendedor</th><th class="r">Capturas</th><th class="r">Empresas</th><th class="r">Quentes</th><th class="r">Reuniões</th><th class="r">Taxa reunião</th><th></th><th class="r">Pontos</th></tr></thead>
+        <tbody>
+        {% for s in S[:8] %}
+          <tr><td class="pos">{{ s.rank }}º</td><td><div class="who"><i>{{ s.ini }}</i>{{ s.name }}{% if s.role %}<em>{{ s.role }}</em>{% endif %}</div></td>
+            <td class="r" style="font-weight:700">{{ s.n }}</td><td class="r">{{ s.empresas }}</td><td class="r q">{{ s.quentes }}</td><td class="r" style="font-weight:700">{{ s.reunioes }}</td><td class="r">{{ s.taxa }}</td>
+            <td class="barc"><div class="bar2"><b style="width:{{ s.w }}%"></b></div></td><td class="r pts">{{ s.pts }}</td></tr>
+        {% endfor %}
+        {% if S|length > 8 %}<tr><td></td><td colspan="8" class="sm">+ {{ S|length - 8 }} vendedores (lista completa nas páginas seguintes)</td></tr>{% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <div class="sec-t">Funil da feira <span>% dos contatos captados</span></div>
+      {% set fcol = ['#8098D6','#4361B8','#E0533D','#1F9D6B'] %}
+      {% for f in m.funnel %}
+      <div class="fb"><span class="fl">{{ f.name }}</span><span class="ft"><b style="width:{{ f.w }}%;background:{{ fcol[loop.index0] }}">{{ f.v }}</b></span><span class="fp">{{ f.p }}</span></div>
+      {% endfor %}
+
+      <div class="sec-t" style="margin-top:3.6mm">Capturas por horário <span>{% for d in m.dias[-6:] %}<i style="display:inline-block;width:2.2mm;height:2.2mm;border-radius:.5mm;background:{{ m.cores_dia[-6:][loop.index0] }};margin:0 .8mm 0 2mm;vertical-align:-.2mm"></i>{{ d.strftime('%d/%m') }}{% endfor %}</span></div>
+      {% set W, H = 420, 112 %}{% set step = (W - 8) / m.hours|length %}{% set bw = step * 0.74 %}
+      <svg width="100%" viewBox="0 0 {{ W }} {{ H + 14 }}">
+        {% for row in m.grid %}{% set x = 8 + loop.index0 * step %}{% set ns = namespace(y=H) %}
+          {% for v in row %}{% set h = (v / m.gmax * (H - 14)) %}
+            <rect x="{{ x }}" y="{{ ns.y - h }}" width="{{ bw }}" height="{{ h }}" fill="{{ m.cores_dia[loop.index0] }}"/>{% set ns.y = ns.y - h %}
+          {% endfor %}
+          {% if row|sum %}<text x="{{ x + bw/2 }}" y="{{ ns.y - 3 }}" text-anchor="middle" font-size="8" font-weight="700" fill="#16295F">{{ row|sum }}</text>{% endif %}
+          <text x="{{ x + bw/2 }}" y="{{ H + 11 }}" text-anchor="middle" font-size="8" fill="#6B7385" font-weight="600">{{ m.hours[loop.index0] }}h</text>
+        {% endfor %}
+        <line x1="0" y1="{{ H }}" x2="{{ W }}" y2="{{ H }}" stroke="#C9D2E6"/>
+      </svg>
+
+      <div class="two">
+        <div>
+          <div class="sec-t" style="margin-bottom:1mm">Temperatura</div>
+          <div class="tbar">{% for t in m.temps if t.p %}<b style="width:{{ t.p }}%;background:{{ t.c }}">{{ t.p }}%</b>{% endfor %}</div>
+          <div class="tl">{% for t in m.temps %}<span><i style="background:{{ t.c }}"></i>{{ t.k }} {{ t.n }}</span>{% endfor %}</div>
+          <div class="sec-t" style="margin:2.6mm 0 1mm">Origem da captura</div>
+          {% for k, v in m.origem %}<div class="ir"><span class="n">{{ k }}</span><span class="t"><b style="width:{{ (100*v/m.origem[0][1])|round|int }}%;background:#25A35A"></b></span><span class="v">{{ v }}</span></div>{% endfor %}
+        </div>
+        <div>
+          <div class="sec-t" style="margin-bottom:1mm">Interesses</div>
+          {% for i in m.inter %}<div class="ir"><span class="n">{{ i.k|truncate(22, True, '…') }}</span><span class="t"><b style="width:{{ i.w }}%"></b></span><span class="v">{{ i.v }}</span></div>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bottom f3">
+    <div class="card">
+      <div class="sec-t" style="margin-bottom:1mm">Leitura executiva</div>
+      {% set L = m.sellers[0] %}
+      <div class="ins"><span class="ic" style="background:var(--ok)">✓</span><div><b>{{ L.name }} lidera</b> com {{ L.pts }} pts e {{ L.reunioes }} reuniões agendadas — {{ L.taxa }} de conversão em reunião.</div></div>
+      {% if m.hot_nomeet %}
+      <div class="ins"><span class="ic" style="background:var(--warn)">!</span><div><b>{{ m.hot_nomeet }} leads quentes sem reunião marcada.</b> Prioridade de follow-up nas próximas 48h.</div></div>
+      {% else %}
+      <div class="ins"><span class="ic" style="background:var(--ok)">✓</span><div><b>Todos os leads quentes têm reunião marcada.</b></div></div>
+      {% endif %}
+      <div class="ins"><span class="ic" style="background:var(--brand)">→</span><div><b>Pico às {{ m.peak_h }}h:</b> concentrar a equipe no corredor nesse horário.</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-t" style="margin-bottom:1mm">Como lançar no WhatsApp</div>
+      <div class="wa">captura: João Pereira, CFO, Metalúrgica Alfa,<br>51 99812-4821, quente, reforma tributária,<br>reunião 28/10 10h, autorizou contato</div>
+      <div class="rule">Também aceita foto do crachá ou cartão e áudio.</div>
+    </div>
+    <div class="card">
+      <div class="sec-t" style="margin-bottom:1mm">Qualidade da base</div>
+      <div class="chk"><span>Com telefone e e-mail</span><b>{{ m.qualidade.completos }}</b></div>
+      <div class="chk"><span>Duplicados mesclados</span><b>{{ m.qualidade.mesclados }}</b></div>
+      <div class="chk"><span>Consentimento LGPD</span><b>{{ m.qualidade.lgpd }}</b></div>
+      <div class="chk"><span>Pendentes de dados</span><b{% if m.qualidade.pendentes %} style="color:var(--warn)"{% endif %}>{{ m.qualidade.pendentes }}</b></div>
+    </div>
+  </section>
+</div>
+{{ footer(1, total, fonte) }}
+</section>
+{% endif %}
+
+<!-- ====================== LISTA POR VENDEDOR ====================== -->
+{% for p in pages %}{% set s = p.s %}
+<section class="page">
+{{ header_slim("Contatos captados por vendedor", ev.nome ~ "  ·  " ~ periodo, "Lista por vendedor") }}
+{% if p.first %}
+<div class="sh">
+  <div class="av">{{ s.ini }}</div>
+  <div><div class="nm">{{ s.name }}</div><div class="rl">{{ s.role }}</div></div>
+  <span class="rk1">{{ s.rank }}º no ranking · {{ s.pts }} pts</span>
+  <div class="stats"><div><b>{{ s.n }}</b><span>Capturas</span></div><div><b>{{ s.empresas }}</b><span>Empresas</span></div><div><b>{{ s.quentes }}</b><span>Quentes</span></div><div><b>{{ s.reunioes }}</b><span>Reuniões</span></div></div>
+</div>
+{% else %}
+<div class="cont">{{ s.name }} <span>· continuação ({{ p.start + 1 }}–{{ p.start + p.rows|length }} de {{ s.n }})</span></div>
+{% endif %}
+<table class="lst">
+  <thead><tr><th></th><th>Contato</th><th>Cargo</th><th>Empresa</th><th>Telefone</th><th>E-mail</th><th>Interesse</th><th>Temperatura</th><th>Reunião</th><th>Origem</th><th class="r">Captado em</th></tr></thead>
+  <tbody>
+  {% for c in p.rows %}{% set tc = TEMP.get(c.temperatura, '#B1B1A7') %}
+    <tr style="--tc:{{ tc }}"><td class="i">{{ c.seq }}</td><td class="nm">{{ c.nome or '—' }}</td><td class="mu">{{ c.cargo or '—' }}</td><td style="font-weight:600">{{ c.empresa or '—' }}</td>
+      <td>{{ c.telefone or '—' }}</td><td class="mu">{{ c.email or '—' }}</td><td>{{ c.interesse or '—' }}</td>
+      <td><span class="tp" style="background:{{ tc }}1F;color:{{ tc }}">● {{ c.temperatura or 'pendente' }}</span></td>
+      <td>{% if c.reuniao_dt %}<span class="mt">{{ c.reuniao_dt.strftime('%d/%m %Hh') }}</span>{% else %}<span class="mu">—</span>{% endif %}</td>
+      <td class="mu">{{ c.origem }}</td><td class="r mu">{{ c.ts.strftime('%d/%m %H:%M') }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{{ footer(loop.index + off, total, fonte) }}
+</section>
+{% endfor %}
+</body>
+</html>

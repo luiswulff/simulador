@@ -1,0 +1,28 @@
+{% macro head(titulo, extra_css='') -%}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>{{ titulo }} — {{ marca }}</title>
+<style>
+{% include "base.css" %}
+{% if extra_css %}{% include extra_css %}{% endif %}
+</style>
+</head>
+{%- endmacro %}
+
+{% macro footer(n, total, fonte) -%}
+<footer class="foot">
+  <span><b style="color:#274397">Confidencial</b> · Uso interno {{ marca }} · {{ fonte }}</span>
+  <span>Gerado automaticamente pelo Argos OpenClaw · Página {{ n }}/{{ total }}</span>
+  <img src="{{ logo_t }}" alt="{{ marca }}">
+</footer>
+{%- endmacro %}
+
+{% macro header_slim(titulo, sub, tag) -%}
+<header class="hdr slim">
+  <img src="{{ logo_w }}" alt="{{ marca }}"><div class="sep"></div>
+  <div><h1>{{ titulo }}</h1><div class="sub">{{ sub }}</div></div>
+  <div class="meta"><span class="tag">{{ tag }}</span></div>
+</header>
+{%- endmacro %}

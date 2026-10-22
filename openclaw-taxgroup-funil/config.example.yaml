@@ -1,0 +1,46 @@
+# Copie para config.yaml e ajuste. Segredos (tokens) NÃO ficam aqui: use variáveis de ambiente
+# (HUBSPOT_TOKEN, PIPEDRIVE_API_TOKEN, LOGO_DEV_TOKEN) ou skills.entries no openclaw.json.
+
+marca: Tax Group
+fuso: America/Sao_Paulo
+
+crm:
+  provedor: hubspot            # hubspot | pipedrive | arquivo (CSV/XLSX exportado — use para o Connect até ter API)
+  pipeline_padrao: "Eventos 2026"   # nome ou id; vazio = primeiro pipeline do CRM
+  periodo_padrao_dias: 90
+  hubspot:
+    campo_solucao: ""          # nome interno de uma propriedade do negócio (ex.: solucao_tax) — opcional
+    campo_segmento: industry   # propriedade da empresa usada como segmento
+    campo_uf: state
+  pipedrive:
+    dominio: ""                # ex.: taxgroup (para taxgroup.pipedrive.com) — opcional
+    campo_solucao: ""          # chave do campo personalizado do negócio — opcional
+  arquivo:
+    caminho: dados/crm.csv
+    etapas: ["Leads captados", "Qualificados", "Reunião realizada", "Proposta enviada", "Negociação"]
+    etapa_ganho: Ganho
+
+pastas:
+  dados: dados                 # banco das feiras (feira.db) e cache de logos
+  saidas: saidas               # PDFs gerados (precisa estar dentro do workspace do OpenClaw para anexar)
+
+logos:
+  provedor: favicon            # favicon (gratuito) | logodev (melhor qualidade, requer LOGO_DEV_TOKEN) | desligado
+  timeout_s: 5
+
+feira:
+  pontuacao: {captura: 1, quente: 2, reuniao: 5}
+  campos_obrigatorios: [nome, empresa, contato, temperatura, consentimento]   # contato = telefone OU e-mail
+  envio_crm: imediato          # imediato | manual (use /sincronizar) | desligado
+  pipeline_crm: ""             # pipeline onde as capturas entram (vazio = pipeline_padrao)
+  etapa_crm: ""                # etapa inicial (nome ou id; vazio = primeira etapa)
+
+mapa:
+  cards_por_pagina: 20         # 20 ou 16
+
+# Quem pode usar via WhatsApp. gestor: true libera relatório completo, exportação e lista de outros vendedores.
+# email (opcional) é usado para definir o responsável (owner) do negócio no HubSpot.
+vendedores:
+  - {nome: "Ana Ribeiro",  telefone: "+55 51 99999-0001", papel: "Vendedora", gestor: true, email: "ana.ribeiro@taxgroup.com.br"}
+  - {nome: "Bruno Costa",  telefone: "+55 51 99999-0002", papel: "SDR"}
+  - {nome: "Carla Mendes", telefone: "+55 51 99999-0003", papel: "SDR"}

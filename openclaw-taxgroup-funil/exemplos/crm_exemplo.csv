@@ -1,0 +1,11 @@
+empresa;etapa;status;valor;contato;cargo;email;telefone;responsavel;solucao;segmento;uf;criado_em;dias_na_etapa;ultima_interacao;motivo_perda;leads
+Metalúrgica Alfa;Proposta enviada;aberto;180000;João Pereira;CFO;joao@metalfa.com.br;51998124821;Ana Ribeiro;Reforma Tributária;Indústria;RS;2026-09-02;12;2026-10-15;;2
+Grupo Horizonte;Negociação;aberto;320000;Marina Rocha;Controller;marina@horizonte.com.br;51991112222;Bruno Costa;Recup. de Créditos;Agronegócio;RS;2026-08-20;6;2026-10-18;;1
+Rede Sul Farma;Ganho;ganho;145000;Paulo Lima;CEO;paulo@redesul.com.br;11990001111;Carla Mendes;Planej. Tributário;Saúde;SP;2026-08-01;;2026-10-01;;1
+Construtora Pilar;Reunião realizada;aberto;90000;Helena Souza;Dir. Financeiro;helena@pilar.com.br;41988887777;Diego Farias;Compliance Fiscal;Construção;PR;2026-09-15;4;2026-10-12;;1
+Vértice Logística;Leads captados;aberto;;Rafael Alves;Gerente Fiscal;rafael@vertice.com.br;51977776666;Ana Ribeiro;;Logística;RS;2026-10-01;3;2026-10-02;;1
+Nova Era Alimentos;Qualificados;aberto;60000;Juliana Becker;CFO;juliana@novaera.com.br;48966665555;Bruno Costa;Reforma Tributária;Alimentos;SC;2026-09-28;9;2026-10-10;;1
+Atlas Energia;Proposta enviada;perdido;210000;Igor Martins;CEO;igor@atlasenergia.com.br;11955554444;Carla Mendes;Recup. de Créditos;Energia;SP;2026-08-10;;2026-09-30;Optou por concorrente;1
+Lumen Têxtil;Leads captados;aberto;;Sílvia Rocha;Controller;silvia@lumen.com.br;51944443333;Diego Farias;;Indústria;RS;2026-10-05;2;2026-10-06;;1
+Orion Varejo;Qualificados;perdido;40000;Tiago Fontana;Sócio;tiago@orionvarejo.com.br;51933332222;Ana Ribeiro;;Varejo;RS;2026-09-01;;2026-09-20;Sem orçamento;1
+Prisma Tecnologia;Ganho;ganho;98000;Vanessa Moraes;CFO;vanessa@prisma.com.br;11922221111;Bruno Costa;Compliance Fiscal;Tecnologia;SP;2026-07-15;;2026-09-10;;2

@@ -1,0 +1,39 @@
+{% from "_macros.html" import head, footer, header_slim with context %}
+{{ head("Mapa de Leads", "mapa.css") }}
+<body>
+{% for page in pages %}
+<section class="page">
+<header class="hdr slim">
+  <img src="{{ logo_w }}" alt="{{ marca }}"><div class="sep"></div>
+  <div><h1>Mapa de Leads</h1><div class="sub">{{ titulo }} &nbsp;·&nbsp; {{ periodo }}</div></div>
+  <div class="meta"><span class="tag">{{ per }} cards por página</span><br>{{ n }} leads · página <b>{{ loop.index }}/{{ total }}</b></div>
+</header>
+<div class="bar"><span class="lt">{{ rotulo_cor }}</span>
+  {% for nome, cor, q in legenda %}<span><i style="background:{{ cor }}"></i>{{ nome|truncate(18, True, '…') }} <b>{{ q }}</b></span>{% endfor %}
+  <span class="flt">Filtro: <b>{{ filtro }}</b> · Ordem: <b>{{ ordem }}</b></span>
+</div>
+<div class="cards">
+{% for c in page %}
+  <div class="cd" style="--tc:{{ c.cor }};--tt:{{ c.cor }}1F">
+    <div class="hd">
+      <div class="lg">{% if c.logo %}<img src="{{ c.logo }}" alt="" style="width:100%;height:100%;object-fit:contain">{% else %}<span class="mono">{{ c.emp_ini }}</span>{% endif %}</div>
+      <div class="who"><div class="en">{{ c.empresa }}</div><div class="es">{{ c.sub or '&nbsp;'|safe }}</div></div>
+    </div>
+    <div class="ct"><span class="av">{{ c.ini }}</span><div class="nl"><span class="nm">{{ c.nome or 'Contato não informado' }}</span>{% if c.cargo %}<span class="cg"> · {{ c.cargo }}</span>{% endif %}</div></div>
+    <div class="ln"><u>Tel.</u><span>{{ c.telefone or '—' }}</span></div>
+    <div class="ln"><u>E-mail</u><span>{{ c.email or '—' }}</span></div>
+    <div class="ln"><u>{{ 'Valor' if c.valor else 'Interesse' }}</u><span style="font-weight:700;color:var(--navy)">{% if c.valor %}R$ {{ '{:,.0f}'.format(c.valor).replace(',', '.') }}{% if c.interesse %} · {{ c.interesse }}{% endif %}{% else %}{{ c.interesse or '—' }}{% endif %}</span></div>
+    <div class="ln"><u>{{ 'Captado' if c.id else 'Últ. contato' }}</u><span>{{ c.captado or '—' }}</span></div>
+    <div class="ft">
+      {% if c.reuniao %}<span class="mt">📅 {{ c.reuniao.strftime('%d/%m %Hh') }}</span>{% elif c.alerta %}<span class="nm2">{{ c.alerta }}</span>{% endif %}
+      {% if c.vendedor %}<span class="sl"><i>{{ c.seller_ini }}</i><span class="sn">{{ c.vendedor.split(' ')[0] }}</span></span>{% endif %}
+      <span class="tp">{{ c.rotulo|truncate(16, True, '…') }}</span>{% if per == 16 and c.id %}<span class="id">{{ c.id }}</span>{% endif %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+{{ footer(loop.index, total, rodape) }}
+</section>
+{% endfor %}
+</body>
+</html>
