@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cotação de hotéis · hotéis perto da Avenida Paulista, São Pa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,200;0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* Padrão TaxCo (Handbook APG): preto, branco e pedra; Hanken Grotesk; rótulos espaçados em caixa alta,
+   filete preto sob o destaque, painéis retos e numerais finos. Uma página: local, resumo e hotéis por preço. */
+:root {
+  --bg: #FFFFFF;
+  --stone: #F0EDE6;
+  --ink: #000000;
+  --muted: #595959;
+  --faint: #A5A5A5;
+  --line: #D1CFC9;
+  --go: #1E8E3E;
+  --caution: #E5A100;
+  --stop: #D93025;
+  --font: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  margin: 0; color: var(--ink); font: 400 13px/1.5 var(--font);
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  padding-block: 32px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 820px; margin: 0 auto; display: grid; gap: 20px; }
+.label { font-size: 9.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top .label { color: var(--muted); font-weight: 600; }
+.top .label.brand { color: var(--ink); font-weight: 700; }
+
+.hero { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 1.5px solid var(--ink); }
+.hero h1 { margin: 0; font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
+.hero .meta { color: var(--muted); font-size: 13px; }
+.hero .client { margin: 0; font-style: italic; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
+.stat .label { color: var(--muted); font-weight: 600; }
+.stat b { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+.stat small { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cards-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
+.legend { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legend .signal { color: var(--muted); font-weight: 600; letter-spacing: .12em; }
+.legend .label { color: var(--muted); font-weight: 600; }
+.cards { display: grid; gap: 8px; }
+.card { background: var(--stone); padding: 12px 18px 12px; display: grid; gap: 8px; }
+.card-head { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.rank { font-size: 30px; line-height: .9; font-weight: 200; color: var(--faint); letter-spacing: -.02em; min-width: 38px; }
+.signal { display: inline-flex; align-items: center; gap: 6px; font-size: 8.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+.signal i { width: 11px; height: 11px; border-radius: 50%; display: block; background: var(--line); }
+.signal.green i { background: var(--go); }
+.signal.yellow i { background: var(--caution); }
+.signal.red i { background: var(--stop); }
+.title { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.title b { font-size: 15px; font-weight: 700; }
+.stars { font-size: 11px; letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+.stars .off { color: var(--line); }
+.stars.none { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.tag { font-size: 8.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; padding: 3px 7px 2px; border: 1px solid var(--ink); white-space: nowrap; align-self: center; }
+.tag.accent { background: var(--ink); color: var(--bg); }
+.tag:not(.accent):not(.dark) { border-color: var(--faint); color: var(--muted); }
+.price { margin-left: auto; text-align: right; display: grid; }
+.price b { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.price span { font-size: 11px; color: var(--muted); }
+
+.body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
+.col { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.rate { font-size: 12.5px; }
+.rate b { font-weight: 700; }
+.facts { display: grid; gap: 1px; font-size: 11.5px; color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 700; }
+.amen { display: flex; flex-wrap: wrap; gap: 4px; }
+.amen span { font-size: 10.5px; padding: 1px 7px; background: var(--bg); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 12px; }
+.links a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; white-space: nowrap; }
+.links a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.links .cancel { font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--go); }
+
+.note-text { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.55; max-width: 100ch; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
+.foot .label { color: var(--muted); font-weight: 600; }
+
+@media (max-width: 620px) {
+  .hero h1 { font-size: 25px; }
+  .body { grid-template-columns: 1fr; gap: 8px; }
+  .title { flex-basis: 100%; order: 3; }
+  .price { margin-left: 0; text-align: left; order: 4; flex-basis: 100%; }
+}
+@media print {
+  @page { size: A4; margin: 9mm 10mm; }
+  body { padding: 0; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page, .cards { display: block; max-width: none; }
+  .page { zoom: var(--print-zoom, 1); }
+  .page > * + * { margin-top: 10px; }
+  .cards > * + * { margin-top: 7px; }
+  .hero { gap: 3px; padding-bottom: 10px; }
+  .hero h1 { font-size: 25px; }
+  .stat b { font-size: 18px; }
+  .card { padding: 7px 14px 8px; gap: 5px; break-inside: avoid; }
+  .card-head { padding-bottom: 5px; }
+  .rank { font-size: 26px; }
+  .facts { font-size: 10.5px; }
+  .amen span { font-size: 10px; }
+  .links { font-size: 11px; gap: 2px 12px; }
+  .body { gap: 12px; }
+  .note-text { font-size: 9px; line-height: 1.4; }
+  .foot { padding-top: 8px; }
+}
+</style>
+</head>
+<body style="--print-zoom: 0.92">
+<main class="page">
+  <div class="top">
+    <span class="label brand">Argos Core</span>
+    <span class="label">Cotação de hotéis</span>
+  </div>
+
+  <section class="hero">
+    <span class="label">Hospedagem</span>
+    <h1>Avenida Paulista, São Paulo</h1>
+    <div class="meta">seg, 16 nov – qua, 18 nov 2026 · 2 noites · 1 adulto</div>
+    <p class="client">Para Helena Prado</p>
+  </section>
+
+  <section class="stats"><div class="stat"><span class="label">A partir de · 3★ ou mais</span><b>R$ 184/noite</b><small>5 opções de 15 analisadas</small></div><div class="stat"><span class="label">Mediana da busca</span><b>R$ 393/noite</b><small>hotéis com preço nas datas</small></div><div class="stat"><span class="label">Dentro do orçamento</span><b>11 de 15</b><small>até R$ 600 por noite</small></div></section>
+
+  <section class="cards">
+    <div class="cards-head"><span class="label">Hotéis · do menor ao maior preço</span><span class="legend"><span class="signal green"><i></i>Dentro</span><span class="signal yellow"><i></i>Até +10%</span><span class="signal red"><i></i>Fora</span><span class="label">Orçamento R$ 600/noite</span></span></div>
+    
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">01</span>
+        <span class="signal green" title="Dentro do orçamento"><i></i>Dentro</span>
+        <div class="title"><b>Hotel Paraíso</b><span class="stars" title="3 estrelas">★★★<span class="off">★★</span></span><span class="tag accent">Mais em conta</span></div>
+        <div class="price"><b>R$ 184,00</b><span>/noite · R$ 368 em 2 noites</span></div>
+      </header>
+      <div class="body">
+        <div class="col">
+          <div class="rate">Nota <b>4</b> · 415 avaliações · localização <b>4,8</b></div>
+          <div class="facts"><span><b>1,6 km</b> do ponto de referência · Itaú Cultural 4 min a pé</span><span>Aeroporto 38 min de táxi</span><span>Típico deste hotel R$ 163–255/noite</span></div>
+        </div>
+        <div class="col">
+          <div class="amen"><span>Café da manhã</span><span>Wi-Fi</span><span>Ar-condicionado</span></div>
+          <div class="links"><span class="cancel">Cancelamento grátis</span><a href="https://www.google.com/travel/lodging/clk?pc=AA80Osx0MD9Kc2w6SpDog8nufitLCHXWf1g8_lsxkIGckaKMz-HE9kUbiaPMCEZKDyGD1-5IS0IjI261tZYXXk0uDkN_DYFg-jxpNRHi85f2Zs8-Yb3TjIwXXfy3BY3gVGYlhTOxcEndi6QvinGUKyL2YyrSXabdXUPz8lVQpnULzPTh4TRBgjz3VBI27A&amp;pcurl=https://www.bluepillow.ca/search/594385837c00cb0e64331a11?begin%3D2026-11-16%26end%3D2026-11-18%26block_id%3D-b,jTLKKCXRKV6LNPQB_A0U8aWTMcGNCqUpE7JV5bC8EZrq6uMqGVdc-BfZw-eer4pm,-bkng-Hotel%26fees%3D0.00%26tax%3D17.50%26total%3D367.74%26adults%3D1%26childs%3D0%26infants%3D0%26childrens%3D0%26country%3DCA%26currency%3DBRL%26language%3Dpt%26source%3Dlocaluniversal%26utm_campaign%3Dhotel%26prid%3Dforeign&amp;s=AD1XQnnADRVcA3QxDq70l0BvUVJ2&amp;ap=1" target="_blank" rel="noopener" title="Menor preço entre os sites">Melhor: Bluepillow.ca R$ 184&nbsp;↗</a><a href="https://www.hotels.com/Hotel-Search?destination=Hotel+Para%C3%ADso&amp;startDate=2026-11-16&amp;endDate=2026-11-18&amp;rooms=1&amp;adults=1" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwjTqPWGhsuXAxWPploFHVqKMGgYACICCAEQARoCdnU&amp;co=1&amp;gclid=EAIaIQobChMI06j1hobLlwMVj6ZaBR1aijBoEAoYAiABEgJoaPD_BwE&amp;cid=CAASuwHkaHpfBeO38_fYcBo0qbktxQyoy7iVvUpgHEQr4iwOzCpdy_EykHeg0QEQDnZd6wX-l5S4EoFGg959Yxdee-fx02i8k1xMEC5lXMgh_of8RhCKCeNmrKP0mCmH6UVeJ4qxqks-0VHj6VILJEhoWnkOhFMLNA5PqXPGFndDmrlbjyYi9mH8JLkjfht9QizyAekQFppnRyawltOJyqu7EkFfsYLMiMcNlKKbIyYIRVn1-LXo6kz5_EYUFsn2&amp;sig=AOD64_3wSiso3QJ1uqFrjtvi5OJ5dEHV6A&amp;adurl" target="_blank" rel="noopener">Booking R$ 185&nbsp;↗</a><a href="https://sphotelparaiso.com.br/" target="_blank" rel="noopener">Oficial&nbsp;↗</a><a href="https://www.google.com/travel/search?q=hot%C3%A9is+perto+da+Avenida+Paulista%2C+S%C3%A3o+Paulo&amp;hl=pt-br&amp;gl=br" target="_blank" rel="noopener">Google&nbsp;↗</a></div>
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">02</span>
+        <span class="signal green" title="Dentro do orçamento"><i></i>Dentro</span>
+        <div class="title"><b>Alameda Apart Hotel</b><span class="stars" title="3 estrelas">★★★<span class="off">★★</span></span></div>
+        <div class="price"><b>R$ 340,00</b><span>/noite · R$ 681 em 2 noites</span></div>
+      </header>
+      <div class="body">
+        <div class="col">
+          <div class="rate">Nota <b>4,2</b> · 777 avaliações · localização <b>4,7</b></div>
+          <div class="facts"><span><b>0,5 km</b> do ponto de referência · Museu de Arte de São Paulo Assis… 8 min a pé</span><span>Aeroporto 47 min de táxi · Check-in 14:00 · saída 11:00</span><span>Típico deste hotel R$ 272–402/noite</span></div>
+        </div>
+        <div class="col">
+          <div class="amen"><span>Café da manhã</span><span>Wi-Fi</span><span>Estacionamento</span><span>Ar-condicionado</span><span>Restaurante</span></div>
+          <div class="links"><a href="https://www.google.com/travel/lodging/clk?pc=AA80OsyrqH4AxF7F2MGuPyxpTcdBifcEqYMWgnPQaBlJySSXS1C7WjyagxqijxPgiUgEoubFz19Kpu4rstdxk4I5l5E1SJrNjFOKAiZK9NyBTDAKizhoHslX-7lpowSElht9djZTsOIHt2VzdC8Muhw0WPGccF46rHV0BEWV5de6nbRHaVTxhhSTitRICzq3_RspdV_Ja7talt4&amp;pcurl=https://clicktrip.com/hotels/details/fZp9mj-GiigqkKsLJ0JonLrp9jjFKmiH38rMazN4cNhnqyv0MBGKFVhTfWK_YBnalmSQx-rs899ex6zhoj_d7DiibFApyG8A6iM5O7R4lw8ydPrPWjv3JdgGvfiwBqh70?locale%3Dpt%26currency%3DBRL%26pos%3DUS%26date_type%3Dselected%26taf%3Dsh-4YdYKZx55HcOF-ul0V7_4VXDgv_sxhgIBxx5tUgmrOYErjBpjjYF1dzkVVNZ7HF788pbH__a8A1TrinlmG5z5ktA5vO1I2-xQrraR3wQ1%26verification%3Dfalse%26clk_src%3D%26utm_source%3Dgha%26rate_rule_id%3D&amp;s=AD1XQnn_OMrzj8UAhliNriVE6lFr&amp;ap=1" target="_blank" rel="noopener" title="Menor preço entre os sites">Melhor: Clicktrip.com R$ 340&nbsp;↗</a><a href="https://www.hotels.com/Hotel-Search?destination=Alameda+Apart+Hotel&amp;startDate=2026-11-16&amp;endDate=2026-11-18&amp;rooms=1&amp;adults=1" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwjmsuDrhcuXAxVZCe8CHSZFKYoYACICCAEQARoCZHo&amp;co=1&amp;gclid=EAIaIQobChMI5rLg64XLlwMVWQnvAh0mRSmKEAoYASABEgKGsfD_BwE&amp;cid=CAASuwHkaL98T8UxUTvuQngXbsV_mkhC4EtB5KjA4uobPSbSO7DrUKvcFxnQUVJRBVT0K7ayyxryoPpoqIc0mZ42dgjK8tyLP_3Vp-41q9WxsSKnGDkbac0GMq8oxkV6kXKwbAKzmZEjIeVInrKa-PnBlSiBb6AMVGFEWnpWYkAewBvzNIzE-xuQbravlRs3kB-NEiwAlEeXZ4JKPcQLTUW9-g7Q0vZvopXXr1LTQ_ZrT06mGrBUVPFqKy6CvBD5&amp;sig=AOD64_3iUTrfqe5QRJnoxgLnv2gMkFzj-w&amp;adurl" target="_blank" rel="noopener">Booking R$ 463&nbsp;↗</a><a href="https://www.google.com/travel/lodging/clk?pc=AA80OsxDs2ThFWduQYboxB-S0fpKP0cP7BSV2lPflO8FAw2sivrjIxBQpaDSzOhBjEotnHd_TmHIP17OHtCkZLOPf2e1W3PPuJWVTbDpszgo8Ynnt7ihY8MHn_PYYENvi8RSVyr0XsqQ5A9YC_reE0D1_tA1x-P4HYbVT7_49NQjss_TPW841wkn3OE&amp;pcurl=https://book.omnibees.com/hotelresults?q%3D20261%26NRooms%3D1%26CheckIn%3D16112026%26CheckOut%3D18112026%26ad%3D1%26ch%3D0%26ag%3D%26group_code%3D%26Code%3D%26loyalty_code%3D%26lang%3Dpt%26currencyId%3DBRL&amp;s=AD1XQnnZpkOkQAzj7jeT95-dCCYm&amp;ap=1" target="_blank" rel="noopener">Oficial R$ 504&nbsp;↗</a><a href="https://www.google.com/travel/search?q=hot%C3%A9is+perto+da+Avenida+Paulista%2C+S%C3%A3o+Paulo&amp;hl=pt-br&amp;gl=br" target="_blank" rel="noopener">Google&nbsp;↗</a></div>
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">03</span>
+        <span class="signal green" title="Dentro do orçamento"><i></i>Dentro</span>
+        <div class="title"><b>Hotel MASSIS</b><span class="stars" title="4 estrelas">★★★★<span class="off">★</span></span></div>
+        <div class="price"><b>R$ 441,00</b><span>/noite · R$ 882 em 2 noites</span></div>
+      </header>
+      <div class="body">
+        <div class="col">
+          <div class="rate">Nota <b>4,2</b> · 662 avaliações · localização <b>4,7</b></div>
+          <div class="facts"><span><b>0,5 km</b> do ponto de referência · Museu de Arte de São Paulo Assis… 9 min a pé</span><span>Aeroporto 40 min de táxi</span><span>Típico deste hotel R$ 391–514/noite</span></div>
+        </div>
+        <div class="col">
+          <div class="amen"><span>Café da manhã</span><span>Wi-Fi</span><span>Estacionamento</span><span>Ar-condicionado</span><span>Piscina</span></div>
+          <div class="links"><span class="cancel">Cancelamento grátis</span><a href="https://www.hotels.com/Hotel-Search?destination=Hotel+MASSIS&amp;startDate=2026-11-16&amp;endDate=2026-11-18&amp;rooms=1&amp;adults=1" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwi3obDshcuXAxU_hloFHZlLOlwYACICCAEQCBoCdnU&amp;co=1&amp;gclid=EAIaIQobChMIt6Gw7IXLlwMVP4ZaBR2ZSzpcEAoYASABEgJMUvD_BwE&amp;cid=CAASuwHkaF3Fv-m0JkJXlZA0hIEuokw5nSAQIT1pjQVjHw_ai7bycIKNp9jXbXnGj8yShraOa-r-iS9rtVcIexHa8xJa2KzYrWO7piqBI7V0uKwBQW0dIyB91r_287gNQzLGC3hEDTqqeZpj_kIJD1VLOuJnKHyPI1GF8zRQhlkD2m_vE9a_qnx4B7Rcgb9nVW1CzCpelzeGeT-oLgcVykK8tDEqto6Ld-wjUJ7_oE_wvsiTaVBMjjVEBSVvH424&amp;sig=AOD64_3oS5_-D3-v-YxXJwLoIRzJKeeVLA&amp;adurl" target="_blank" rel="noopener">Booking R$ 504&nbsp;↗</a><a href="https://www.google.com/travel/lodging/clk?pc=AA80OszCSCU23EXYfDJGZccSlLgH2lzuuxYe1_lNjaFQ78Cg_ZYyz06XSNVBblu37W7wUgz6FHs7lpTN8-X3wzIXOkpsfgf7npbC0VsGZUeo1vPnVjB5GDWqUu0NpxmA5809OlP_2PyhuX-a-Aq_-JgcYJ-qMn2LcJzaM40IEx94xV5zIDyfHfNeALk&amp;pcurl=https://book.omnibees.com/hotelresults?q%3D3895%26NRooms%3D1%26CheckIn%3D16112026%26CheckOut%3D18112026%26ad%3D1%26ch%3D0%26ag%3D%26group_code%3D%26Code%3D%26loyalty_code%3D%26lang%3Dpt%26currencyId%3DBRL&amp;s=AD1XQnk_CYEX8_Mm3LkVkl3ynkPH&amp;ap=1" target="_blank" rel="noopener">Oficial R$ 441&nbsp;↗</a><a href="https://www.google.com/travel/search?q=hot%C3%A9is+perto+da+Avenida+Paulista%2C+S%C3%A3o+Paulo&amp;hl=pt-br&amp;gl=br" target="_blank" rel="noopener">Google&nbsp;↗</a></div>
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">04</span>
+        <span class="signal green" title="Dentro do orçamento"><i></i>Dentro</span>
+        <div class="title"><b>Travel Inn Premium Flats Paulista Wall Street</b><span class="stars" title="4 estrelas">★★★★<span class="off">★</span></span><span class="tag dark">Recomendado</span></div>
+        <div class="price"><b>R$ 460,00</b><span>/noite · R$ 920 em 2 noites</span></div>
+      </header>
+      <div class="body">
+        <div class="col">
+          <div class="rate">Nota <b>4,3</b> · 2.673 avaliações · localização <b>4,7</b></div>
+          <div class="facts"><span><b>0,2 km</b> do ponto de referência · Museu de Arte de São Paulo Assis… 5 min a pé</span><span>Aeroporto 37 min de táxi</span><span>Típico deste hotel R$ 393–603/noite</span></div>
+        </div>
+        <div class="col">
+          <div class="amen"><span>Café da manhã</span><span>Wi-Fi</span><span>Academia</span><span>Estacionamento</span><span>Salas de reunião</span></div>
+          <div class="links"><a href="https://www.google.com/travel/lodging/clk?pc=AA80OswQ6MbGJosZjO6jRA1O0MrrpkXOXvsR_HeKC7xFeyGTSNjc6PyBc3ygMqX-obRdlVp-cj0TRUp524DphFCshbAb25fImkR1inCL_vOoRQFtk_W9RvJHaBWc_FIK1uTbfTw412t9UduqThVxMONLSVJaQOwcEUcdSMVNMMmX6BYjs_hpEmUOYNxnEuhMwz65E5S97ZMOx9jg&amp;pcurl=https://www.reservationday.com/transition/?data%3Dprice%3D173.26%2526total_price%3D180.49%2526retail_price%3D216.87%2526retail_total_price%3D225.92%2526request_id%3D12649720624335368192%2526ps%3D125358856027%2526pb%3D0-slAkZlDjP06IhVxwa_7JtR-gQ8glNczAglKKWpi__Qc_bN0qkzJPXPVTpdgB6KVoAvb0TCzqttrjjScWyf5dfskfGn4565qMeQQl2Vqhw9_8SeqgR0olcE5Hq5WaWE4O9b2slVTPQ5Gg8mwxkW-g%25253D%25253D%2526gha_rd_pull_request%3DTrue%2526alwd_rand%3Dfalse%2526gt%3D1792580400%2526sg%3DqGZyF%2526ib%3Dfalse%2526all_inclusive%3Dfalse%26utm_source%3Dgha_rd%26utm_content%3Dlocaluniversal%26currency%3DUSD%26user_country%3DUS%26verification%3Dfalse%26rate_rule_ids%3D%26date_type%3Dselected%26rate_rule_id%3Dsignedout_desktop%26display_currency%3DBRL%26display_all_inclusive_price%3D907.49%26checkin_at%3D2026-11-16%26checkout_at%3D2026-11-18%26provider_hotel_id%3D10018233813%26provider%3Dhtl%26num_adults%3D1%26children%3D%5B%5D%26hotel_campaign%3D%26user_locale%3Dpt-US%26user_list_id%3D%26utm_medium%3Dorganic%26utm_id%3Dgha_organic_rd&amp;s=AD1XQnmwSaOwUW5PJh5dPaiO0iBB&amp;ap=1" target="_blank" rel="noopener" title="Menor preço entre os sites">Melhor: Reservation Day R$ 454&nbsp;↗</a><a href="https://www.hotels.com/Hotel-Search?destination=Travel+Inn+Premium+Flats+Paulista+Wall+Street&amp;startDate=2026-11-16&amp;endDate=2026-11-18&amp;rooms=1&amp;adults=1" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwiryuTphcuXAxXGNggFHXbhAiAYACICCAEQARoCbWQ&amp;co=1&amp;gclid=EAIaIQobChMIq8rk6YXLlwMVxjYIBR124QIgEAoYAiABEgJ3nPD_BwE&amp;cid=CAASuwHkaON_ZbW7VzQ8WfRjGOTDEvHVXIuU7wsMiVz0MzHo62RP-Z6q9Jo9Xwd48vC1eYNByNpNbk6cOwSmAfMyqUwqZYVyATQhaI743mLlx0wvc9F1fPHV_uC21-1m0CRZRj4hyh_DHGNwJ2VEfiW3KUlIq4vV_cWJcjE05jS8EaNkdEJj4VNaGIUz4bkWaRDwCtbub8Sousd4jBXgJwWniZ4NR92X2q-R8slAOss1x_5yR6bhgRFlZ-EujCHG&amp;sig=AOD64_3qMdiKUuEApHsDCLyFSb-f4WpGGQ&amp;adurl" target="_blank" rel="noopener">Booking R$ 566&nbsp;↗</a><a href="https://www.google.com/travel/lodging/clk?pc=AA80OszPm8Ndub1cH9mMTacOACw5VYWAFK-m0X5HHyjkMsNFgSe6XhglRM4vPG_K1_YNxvYqsxc1ZfLUhJ5zscaxFt3tLAKzZtVAo-4diXN7CxgYGSRonJcr7AO1dMO55xQ1Mm63ncrLjIiRIcJU665SzPbxjzZrEjBmX2K7z69wyTBBkEQBcqdylh8&amp;pcurl=https://book.omnibees.com/hotelresults?q%3D13058%26NRooms%3D1%26CheckIn%3D16112026%26CheckOut%3D18112026%26ad%3D1%26ch%3D0%26ag%3D%26group_code%3D%26Code%3D%26loyalty_code%3D%26lang%3Dpt%26currencyId%3DBRL&amp;s=AD1XQnmdFhUq4P76KgIG44IGfoeK&amp;ap=1" target="_blank" rel="noopener">Oficial R$ 503&nbsp;↗</a><a href="https://www.google.com/travel/search?q=hot%C3%A9is+perto+da+Avenida+Paulista%2C+S%C3%A3o+Paulo&amp;hl=pt-br&amp;gl=br" target="_blank" rel="noopener">Google&nbsp;↗</a></div>
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <header class="card-head">
+        <span class="rank">05</span>
+        <span class="signal red" title="Fora do orçamento"><i></i>Fora</span>
+        <div class="title"><b>Vila Galé Paulista</b><span class="stars" title="4 estrelas">★★★★<span class="off">★</span></span><span class="tag ">Melhor avaliado</span><span class="tag ">Fora da política</span></div>
+        <div class="price"><b>R$ 661,00</b><span>/noite · R$ 1.322 em 2 noites</span></div>
+      </header>
+      <div class="body">
+        <div class="col">
+          <div class="rate">Nota <b>4,6</b> · 972 avaliações · localização <b>4,7</b></div>
+          <div class="facts"><span><b>0,8 km</b> do ponto de referência · Museu de Arte de São Paulo Assis… 8 min de transporte público</span><span>Aeroporto 40 min de táxi</span><span>Típico deste hotel R$ 468–675/noite</span></div>
+        </div>
+        <div class="col">
+          <div class="amen"><span>Café da manhã</span><span>Wi-Fi</span><span>Academia</span><span>Estacionamento</span><span>Ar-condicionado</span></div>
+          <div class="links"><span class="cancel">Cancelamento grátis</span><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwj96tiHhsuXAxVP-kwCHQiSGpAYACICCAEQAxoCdG0&amp;co=1&amp;gclid=EAIaIQobChMI_erYh4bLlwMVT_pMAh0IkhqQEAoYBCABEgJIdfD_BwE&amp;cid=CAASuwHkaPrQ3L3ZYWBAMumbj1MVIPlpKvFc3LqWhK3w_m9p2FId9H5JAvtxYqMJQ9aUVsiW6Oy4L_tK3B5GRZEmM6QxJao7urUXNSbsV788kYmp_DOQA440n7AOQSjBcAWQ8px9l7gQSLtRQTQkzo8FcWf4zze12gf0viR_5Lmggp2TlznjJeyr4KxCx5VLjXQtXQ-5ZG4qGG9h8q614w2VrTupuvNGZWhUWa-zL4RuFzKYFTq9tEMY77tElEv5&amp;sig=AOD64_3PDy_yrxuS4P1oYERMt_BrjB3NWw&amp;adurl" target="_blank" rel="noopener" title="Menor preço entre os sites">Melhor: Vio.com R$ 661&nbsp;↗</a><a href="https://www.hotels.com/Hotel-Search?destination=Vila+Gal%C3%A9+Paulista&amp;startDate=2026-11-16&amp;endDate=2026-11-18&amp;rooms=1&amp;adults=1" target="_blank" rel="noopener" title="Buscar no Hotels.com com as datas (entre na sua conta para tarifas de membro)">Hotels.com&nbsp;↗</a><a href="https://www.google.com/aclk?sa=l&amp;ai=DChsSEwj96tiHhsuXAxVP-kwCHQiSGpAYACICCAEQBRoCdG0&amp;co=1&amp;gclid=EAIaIQobChMI_erYh4bLlwMVT_pMAh0IkhqQEAoYAiABEgL_gPD_BwE&amp;cid=CAASuwHkaPrQ3L3ZYWBAMumbj1MVIPlpKvFc3LqWhK3w_m9p2FId9H5JAvtxYqMJQ9aUVsiW6Oy4L_tK3B5GRZEmM6QxJao7urUXNSbsV788kYmp_DOQA440n7AOQSjBcAWQ8px9l7gQSLtRQTQkzo8FcWf4zze12gf0viR_5Lmggp2TlznjJeyr4KxCx5VLjXQtXQ-5ZG4qGG9h8q614w2VrTupuvNGZWhUWa-zL4RuFzKYFTq9tEMY77tElEv5&amp;sig=AOD64_05nhqDUx59fGfeOIkTDxMYsIvKHA&amp;adurl" target="_blank" rel="noopener">Booking R$ 745&nbsp;↗</a><a href="https://www.vilagale.com/pt-pt/hoteis-brasil/hoteis-sao-paulo/vila-gale-paulista/" target="_blank" rel="noopener">Oficial&nbsp;↗</a><a href="https://www.google.com/travel/search?q=hot%C3%A9is+perto+da+Avenida+Paulista%2C+S%C3%A3o+Paulo&amp;hl=pt-br&amp;gl=br" target="_blank" rel="noopener">Google&nbsp;↗</a></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <p class="note-text">Diárias com impostos e taxas estimados, para 1 adulto, consultadas no Google Hotels em 21 out 2026, 15:55. Os preços mudam sem aviso: confirme no link antes de reservar. No Hotels.com, entre na sua conta para ver tarifas de membro. Categoria e notas conforme Google; recomendação pondera nota, localização, preço, avaliações e categoria.</p>
+  <footer class="foot">
+    <span class="label">Argos Core</span>
+    <span class="label">Cotação AH-261021-B52D · Válida até 22 out, 15:55</span>
+  </footer>
+</main>
+</body>
+</html>

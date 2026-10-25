@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,200;0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* Padrão TaxCo (Handbook APG): preto, branco e pedra; Hanken Grotesk; rótulos espaçados em caixa alta,
+   filete preto sob o destaque, painéis retos e numerais finos. Uma página: local, resumo e hotéis por preço. */
+:root {
+  --bg: #FFFFFF;
+  --stone: #F0EDE6;
+  --ink: #000000;
+  --muted: #595959;
+  --faint: #A5A5A5;
+  --line: #D1CFC9;
+  --go: #1E8E3E;
+  --caution: #E5A100;
+  --stop: #D93025;
+  --font: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  margin: 0; color: var(--ink); font: 400 13px/1.5 var(--font);
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  padding-block: 32px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 820px; margin: 0 auto; display: grid; gap: 20px; }
+.label { font-size: 9.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top .label { color: var(--muted); font-weight: 600; }
+.top .label.brand { color: var(--ink); font-weight: 700; }
+
+.hero { display: grid; gap: 6px; padding-bottom: 16px; border-bottom: 1.5px solid var(--ink); }
+.hero h1 { margin: 0; font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
+.hero .meta { color: var(--muted); font-size: 13px; }
+.hero .client { margin: 0; font-style: italic; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
+.stat .label { color: var(--muted); font-weight: 600; }
+.stat b { font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+.stat small { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cards-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
+.legend { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legend .signal { color: var(--muted); font-weight: 600; letter-spacing: .12em; }
+.legend .label { color: var(--muted); font-weight: 600; }
+.cards { display: grid; gap: 8px; }
+.card { background: var(--stone); padding: 12px 18px 12px; display: grid; gap: 8px; }
+.card-head { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.rank { font-size: 30px; line-height: .9; font-weight: 200; color: var(--faint); letter-spacing: -.02em; min-width: 38px; }
+.signal { display: inline-flex; align-items: center; gap: 6px; font-size: 8.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+.signal i { width: 11px; height: 11px; border-radius: 50%; display: block; background: var(--line); }
+.signal.green i { background: var(--go); }
+.signal.yellow i { background: var(--caution); }
+.signal.red i { background: var(--stop); }
+.title { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.title b { font-size: 15px; font-weight: 700; }
+.stars { font-size: 11px; letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+.stars .off { color: var(--line); }
+.stars.none { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.tag { font-size: 8.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; padding: 3px 7px 2px; border: 1px solid var(--ink); white-space: nowrap; align-self: center; }
+.tag.accent { background: var(--ink); color: var(--bg); }
+.tag:not(.accent):not(.dark) { border-color: var(--faint); color: var(--muted); }
+.price { margin-left: auto; text-align: right; display: grid; }
+.price b { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.price span { font-size: 11px; color: var(--muted); }
+
+.body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
+.col { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.rate { font-size: 12.5px; }
+.rate b { font-weight: 700; }
+.facts { display: grid; gap: 1px; font-size: 11.5px; color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 700; }
+.amen { display: flex; flex-wrap: wrap; gap: 4px; }
+.amen span { font-size: 10.5px; padding: 1px 7px; background: var(--bg); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; font-size: 12px; }
+.links a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; white-space: nowrap; }
+.links a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.links .cancel { font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--go); }
+
+.note-text { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.55; max-width: 100ch; }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
+.foot .label { color: var(--muted); font-weight: 600; }
+
+@media (max-width: 620px) {
+  .hero h1 { font-size: 25px; }
+  .body { grid-template-columns: 1fr; gap: 8px; }
+  .title { flex-basis: 100%; order: 3; }
+  .price { margin-left: 0; text-align: left; order: 4; flex-basis: 100%; }
+}
+@media print {
+  @page { size: A4; margin: 9mm 10mm; }
+  body { padding: 0; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page, .cards { display: block; max-width: none; }
+  .page { zoom: var(--print-zoom, 1); }
+  .page > * + * { margin-top: 10px; }
+  .cards > * + * { margin-top: 7px; }
+  .hero { gap: 3px; padding-bottom: 10px; }
+  .hero h1 { font-size: 25px; }
+  .stat b { font-size: 18px; }
+  .card { padding: 7px 14px 8px; gap: 5px; break-inside: avoid; }
+  .card-head { padding-bottom: 5px; }
+  .rank { font-size: 26px; }
+  .facts { font-size: 10.5px; }
+  .amen span { font-size: 10px; }
+  .links { font-size: 11px; gap: 2px 12px; }
+  .body { gap: 12px; }
+  .note-text { font-size: 9px; line-height: 1.4; }
+  .foot { padding-top: 8px; }
+}
+</style>
+</head>
+<body style="--print-zoom: {{print_zoom}}">
+<main class="page">
+  <div class="top">
+    <span class="label brand">{{brand}}</span>
+    <span class="label">Cotação de hotéis</span>
+  </div>
+
+  <section class="hero">
+    <span class="label">Hospedagem</span>
+    <h1>{{place_title}}</h1>
+    <div class="meta">{{meta}}</div>
+    {{client_line}}
+  </section>
+
+  <section class="stats">{{stats_html}}</section>
+
+  <section class="cards">
+    <div class="cards-head"><span class="label">Hotéis · do menor ao maior preço</span><span class="legend">{{legend}}</span></div>
+    {{options_html}}
+  </section>
+
+  <p class="note-text">{{footnote}}</p>
+  <footer class="foot">
+    <span class="label">{{brand}}</span>
+    <span class="label">Cotação {{reference}} · Válida até {{valid_until}}</span>
+  </footer>
+</main>
+</body>
+</html>
