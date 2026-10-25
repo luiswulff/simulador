@@ -1,5 +1,7 @@
 # OpenClaw · Flight & Hotel Search
 
+> **Padrão visual:** cores, tipografia, componentes e regras das cotações estão em [`DESIGN.md`](DESIGN.md).
+
 Skill de **pesquisa e monitoramento de preços de voos** para agentes autônomos [OpenClaw](https://docs.openclaw.ai), usando o Google Flights via [SerpApi](https://serpapi.com).
 O agente busca, compara, avalia se o preço está bom, gera cotações de uma página e avisa quando baixar. **Não reserva nem compra** — a compra fica com você, pelo link do Google Flights.
 
