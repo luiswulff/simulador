@@ -209,7 +209,7 @@ Critério de aceite: **nenhuma rolagem horizontal a 390px**.
 ## 9. Acessibilidade
 
 - Cor nunca é o único sinal: semáforo sempre com rótulo; selos com texto.
-- Contraste: texto principal preto sobre branco/pedra; secundário `#595959` (≥ 7:1 sobre branco).
+- Contraste: texto principal preto sobre branco/pedra; secundário `#595959` (7:1 sobre branco; 6:1 sobre o pedra `#F0EDE6`).
 - Links com foco visível; `title` nos rótulos curtos (semáforo, links abreviados).
 - Barras e gráficos com `aria-label`/`role="img"` quando carregam informação.
 
