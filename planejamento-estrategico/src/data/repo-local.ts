@@ -10,12 +10,13 @@ function limparFiltro(filtro?: Filtro) {
   return Object.fromEntries(Object.entries(filtro ?? {}).filter(([, v]) => v !== undefined));
 }
 
-const CHAVE = 'pe-demo-v3';
+const CHAVE = 'pe-demo-v4';
 
 /** Exclusão em cascata no modo demo (espelha os ON DELETE CASCADE do schema.sql). */
 const CASCATA: Partial<Record<TableName, [TableName, string][]>> = {
   pe_pilares: [['pe_objetivos', 'pilar_id']],
-  pe_objetivos: [['pe_iniciativas', 'objetivo_id'], ['pe_indicadores', 'objetivo_id']],
+  pe_objetivos: [['pe_iniciativas', 'objetivo_id'], ['pe_indicadores', 'objetivo_id'], ['pe_swot_objetivos', 'objetivo_id']],
+  pe_swot: [['pe_swot_objetivos', 'swot_id']],
   pe_iniciativas: [['pe_acoes', 'iniciativa_id']],
   pe_acoes: [['pe_acao_atualizacoes', 'acao_id']],
   pe_indicadores: [['pe_indicador_metas', 'indicador_id'], ['pe_indicador_medicoes', 'indicador_id']],

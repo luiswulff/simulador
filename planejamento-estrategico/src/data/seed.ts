@@ -5,6 +5,7 @@
  */
 import type { Tables, TableName, Status } from './types';
 import scorecard from './scorecard-2026.json';
+import swotRascunho from './swot-rascunho.json';
 
 type Store = { [K in TableName]?: Tables[K][] };
 
@@ -168,7 +169,22 @@ export function dadosExemplo(): Store {
   );
 
 
+  // SWOT: rascunho a partir do quadro 2026 e do OnePage (04/11/2026), a validar pelos sócios.
+  const swot: Tables['pe_swot'][] = (swotRascunho as (Partial<Tables['pe_swot']> & { chave: string })[]).map(({ chave, ...s }, n) => ({
+    ...s, id: `sw-${chave}`, ciclo_id: C, rascunho: true, ordem: n, quadrante: s.quadrante!, titulo: s.titulo!,
+  }));
+  // Vínculos ilustrativos com os objetivos de exemplo (alguns itens ficam sem objetivo de propósito: lacunas)
+  const vinc: [string, string][] = [
+    ['f-rede', 'ob-1'], ['o-crosssell', 'ob-1'], ['w-produtividade', 'ob-1'], ['f-marcas', 'ob-1'],
+    ['f-rede', 'ob-2'], ['t-churn-rede', 'ob-2'], ['o-consolidacao', 'ob-2'],
+    ['t-concorrencia', 'ob-3'], ['o-universo', 'ob-3'],
+    ['w-gestao-dados', 'ob-4'], ['f-dados', 'ob-4'], ['w-conversao', 'ob-4'],
+  ];
+  const swotObjetivos: Tables['pe_swot_objetivos'][] = vinc.map(([sw, ob]) => ({ id: `so-${sw}-${ob}`, swot_id: `sw-${sw}`, objetivo_id: ob }));
+
   return {
+    pe_swot: swot,
+    pe_swot_objetivos: swotObjetivos,
     pe_ciclos: [{ id: C, nome: 'Planejamento Estratégico 2027–2030', ano_inicio: 2027, ano_fim: 2030, status: 'ativo',
       ambicao: '[Exemplo — substitua] Transformar a firma na Big Five brasileira de consultoria tributária e empresarial.' }],
     org_areas: areas,

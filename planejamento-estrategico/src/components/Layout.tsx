@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Compass, Mountain, Network, ListChecks, Gauge, Building2, Users,
-  Wallet, GraduationCap, TrendingUp, Settings, LogOut, Menu, X, Lock, Target, ChevronRight, CalendarRange,
+  Wallet, GraduationCap, TrendingUp, Settings, LogOut, Menu, X, Lock, Target, ChevronRight, CalendarRange, Grid2x2,
 } from 'lucide-react';
 import { useAuth, usePode } from '../contexts/AuthContext';
 import { config } from '../config';
@@ -15,6 +15,7 @@ const GRUPOS: { titulo: string; itens: Item[] }[] = [
   { titulo: 'Direção', itens: [
     { to: '/identidade', label: 'Missão, visão e valores', icon: Compass },
     { to: '/ambicao', label: 'Ambição 2030', icon: Mountain },
+    { to: '/swot', label: 'Análise SWOT', icon: Grid2x2 },
   ] },
   { titulo: 'Desdobramento', itens: [
     { to: '/estrategia', label: 'Mapa estratégico', icon: Network },

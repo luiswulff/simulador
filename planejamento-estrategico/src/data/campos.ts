@@ -36,6 +36,19 @@ export const CAMPOS: Partial<Record<TableName, Campo[]>> = {
     { nome: 'comportamentos', label: 'Comportamentos esperados (um por linha)', tipo: 'textarea' },
     ordem,
   ],
+  pe_swot: [
+    { nome: 'quadrante', label: 'Quadrante', tipo: 'select', obrigatorio: true, opcoes: [
+      { value: 'forca', label: 'Força (interna, positiva)' }, { value: 'fraqueza', label: 'Fraqueza (interna, negativa)' },
+      { value: 'oportunidade', label: 'Oportunidade (externa, positiva)' }, { value: 'ameaca', label: 'Ameaça (externa, negativa)' },
+    ] },
+    { nome: 'titulo', label: 'Item', tipo: 'text', obrigatorio: true },
+    { nome: 'descricao', label: 'Descrição', tipo: 'textarea' },
+    { nome: 'evidencia', label: 'Evidência / fonte do dado', tipo: 'textarea', ajuda: 'O número ou fato que sustenta o item (ex.: OnePage, 04/11/2026: 355 unidades ativas).' },
+    { nome: 'impacto', label: 'Impacto (1 a 5)', tipo: 'number', passo: 1 },
+    { nome: 'area_id', label: 'Área mais relacionada', tipo: 'ref', tabela: 'org_areas', rotulo: 'nome' },
+    { nome: 'rascunho', label: 'Rascunho (ainda não validado pelos sócios)', tipo: 'checkbox' },
+    { nome: 'ordem', label: 'Ordem de exibição', tipo: 'number' },
+  ],
   pe_marcos: [
     { nome: 'ano', label: 'Ano', tipo: 'number', obrigatorio: true },
     { nome: 'titulo', label: 'Marco', tipo: 'text', obrigatorio: true },

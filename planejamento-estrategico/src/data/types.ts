@@ -209,6 +209,25 @@ export interface ValuationProjecao {
   socios?: number | null;
 }
 
+export type Quadrante = 'forca' | 'fraqueza' | 'oportunidade' | 'ameaca';
+export interface SwotItem extends Base {
+  ciclo_id: string;
+  quadrante: Quadrante;
+  titulo: string;
+  descricao?: string | null;
+  evidencia?: string | null;
+  impacto?: number | null;
+  area_id?: string | null;
+  rascunho?: boolean;
+  ordem?: number;
+}
+
+export interface SwotObjetivo {
+  id: string;
+  swot_id: string;
+  objetivo_id: string;
+}
+
 /** Mapa nome-da-tabela → tipo da linha. É o "contrato" do data layer. */
 export interface Tables {
   org_areas: Area;
@@ -229,6 +248,8 @@ export interface Tables {
   pe_carreira_degraus: Degrau;
   pe_valuation_cenarios: ValuationCenario;
   pe_valuation_projecoes: ValuationProjecao;
+  pe_swot: SwotItem;
+  pe_swot_objetivos: SwotObjetivo;
 }
 
 export type TableName = keyof Tables;

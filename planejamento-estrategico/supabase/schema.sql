@@ -351,6 +351,34 @@ create table if not exists pe_valuation_projecoes (
 );
 
 -- ============================================================================
+-- 5b. ANÁLISE SWOT (diagnóstico que justifica os objetivos)
+-- ============================================================================
+
+create table if not exists pe_swot (
+  id uuid primary key default gen_random_uuid(),
+  ciclo_id uuid not null references pe_ciclos(id) on delete cascade,
+  quadrante text not null check (quadrante in ('forca', 'fraqueza', 'oportunidade', 'ameaca')),
+  titulo text not null,
+  descricao text,
+  evidencia text,                      -- dado/fonte que sustenta o item
+  impacto int check (impacto between 1 and 5),
+  area_id uuid references org_areas(id) on delete set null,
+  rascunho boolean not null default false,  -- true = proposto, ainda não validado pelos sócios
+  ordem int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Quais objetivos respondem a quais itens da SWOT (muitos-para-muitos)
+create table if not exists pe_swot_objetivos (
+  id uuid primary key default gen_random_uuid(),
+  swot_id uuid not null references pe_swot(id) on delete cascade,
+  objetivo_id uuid not null references pe_objetivos(id) on delete cascade,
+  unique (swot_id, objetivo_id)
+);
+create index if not exists idx_pe_swot_obj_objetivo on pe_swot_objetivos(objetivo_id);
+
+-- ============================================================================
 -- 6. HISTÓRICO (auditoria de tudo que muda — o plano "vivo" tem memória)
 -- ============================================================================
 
@@ -387,7 +415,7 @@ begin
   foreach t in array array[
     'org_areas','org_pessoas','pe_cargos','pe_carreira_degraus','pe_ciclos','pe_identidade',
     'pe_marcos','pe_pilares','pe_objetivos','pe_iniciativas','pe_acoes','pe_indicadores',
-    'pe_faixas_salariais','pe_valuation_cenarios'
+    'pe_faixas_salariais','pe_valuation_cenarios','pe_swot'
   ] loop
     execute format('drop trigger if exists %I_touch on %I', t, t);
     execute format('create trigger %I_touch before update on %I for each row execute function pe_touch_updated_at()', t, t);
@@ -397,7 +425,7 @@ begin
     'pe_identidade','pe_marcos','pe_pilares','pe_objetivos','pe_iniciativas','pe_acoes',
     'pe_indicadores','pe_indicador_metas','pe_indicador_medicoes','pe_faixas_salariais',
     'pe_carreira_degraus','pe_cargos','pe_valuation_cenarios','pe_valuation_projecoes',
-    'org_areas','org_pessoas'
+    'org_areas','org_pessoas','pe_swot','pe_swot_objetivos'
   ] loop
     execute format('drop trigger if exists %I_audit on %I', t, t);
     execute format('create trigger %I_audit after insert or update or delete on %I for each row execute function pe_auditar()', t, t);
@@ -429,7 +457,7 @@ begin
   -- Tabelas de leitura geral, edição só da diretoria
   foreach t in array array[
     'org_areas','org_pessoas','pe_cargos','pe_carreira_degraus','pe_ciclos','pe_identidade',
-    'pe_marcos','pe_pilares','pe_objetivos','pe_indicador_metas'
+    'pe_marcos','pe_pilares','pe_objetivos','pe_indicador_metas','pe_swot','pe_swot_objetivos'
   ] loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists %I on %I', t || '_read', t);

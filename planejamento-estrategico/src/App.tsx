@@ -6,6 +6,7 @@ import { LoginPage } from './pages/Login';
 import { PainelPage } from './pages/Painel';
 import { IdentidadePage } from './pages/Identidade';
 import { AmbicaoPage } from './pages/Ambicao';
+import { SwotPage } from './pages/Swot';
 import { IniciativaPage, MapaEstrategicoPage, ObjetivoPage, PilarPage } from './pages/Estrategia';
 import { AcaoPage, ExecucaoPage } from './pages/Execucao';
 import { IndicadorPage, IndicadoresPage } from './pages/Indicadores';
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/" element={<PainelPage />} />
         <Route path="/identidade" element={<IdentidadePage />} />
         <Route path="/ambicao" element={<AmbicaoPage />} />
+        <Route path="/swot" element={<SwotPage />} />
         <Route path="/estrategia" element={<MapaEstrategicoPage />} />
         <Route path="/estrategia/pilares/:id" element={<PilarPage />} />
         <Route path="/estrategia/objetivos/:id" element={<ObjetivoPage />} />

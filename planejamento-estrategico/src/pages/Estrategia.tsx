@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
-import { useIndex, useList, useRow } from '../data/hooks';
+import { useIndex, useList, useRemove, useRow, useSave } from '../data/hooks';
 import { useCiclo } from '../data/ciclo';
 import { useMetricas } from '../data/metricas';
+import { QUADRANTES } from './Swot';
 import { usePode } from '../contexts/AuthContext';
 import { useEditor } from '../components/EntityForm';
 import { BotaoNovo, BotoesLinha, Carregando, DrillCard, PageHeader, Progresso, Secao, StatusBadge, Texto, Vazio } from '../components/ui';
@@ -136,6 +137,8 @@ export function ObjetivoPage() {
         </div>
       </Secao>
 
+      <SwotDoObjetivo objetivoId={o.id} />
+
       <Secao titulo="Iniciativas"
         acoes={pode.registrar && pode.editarDaArea(o.area_id) && <BotaoNovo onClick={() => edIni.novo({ objetivo_id: o.id, area_id: o.area_id, status: 'nao_iniciado' })}>Iniciativa</BotaoNovo>}>
         <div className="grid gap-3 md:grid-cols-2">
@@ -237,5 +240,44 @@ export function TabelaAcoes({ acoes, mostrarIniciativa }: { acoes: import('../da
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Itens da SWOT a que o objetivo responde (o "porquê" do objetivo). */
+function SwotDoObjetivo({ objetivoId }: { objetivoId: string }) {
+  const itens = useList('pe_swot');
+  const vinculos = useList('pe_swot_objetivos', { objetivo_id: objetivoId });
+  const pode = usePode();
+  const salvar = useSave('pe_swot_objetivos');
+  const remover = useRemove('pe_swot_objetivos');
+  const ligados = (vinculos.data ?? []).map((v) => ({ v, i: (itens.data ?? []).find((x) => x.id === v.swot_id) })).filter((x) => x.i);
+  const livres = (itens.data ?? []).filter((i) => !ligados.some((l) => l.i!.id === i.id));
+  return (
+    <Secao titulo="Responde à análise SWOT" acoes={<Link to="/swot" className="text-xs font-semibold text-accent-700 hover:underline">Ver SWOT →</Link>}>
+      <div className="card">
+        <div className="flex flex-wrap gap-2">
+          {ligados.map(({ v, i }) => {
+            const Q = QUADRANTES[i!.quadrante];
+            return (
+              <span key={v.id} className="chip py-1" style={{ background: Q.fundo, color: Q.cor }}>
+                <b>{Q.nome.slice(0, -1)}:</b> {i!.titulo}
+                {pode.editarEstrutura && <button className="ml-1 opacity-60 hover:opacity-100" title="Desvincular" onClick={() => remover.mutate(v.id)}>×</button>}
+              </span>
+            );
+          })}
+          {!ligados.length && <p className="text-sm text-ink-500">Nenhum item da SWOT vinculado. Todo objetivo deveria responder a uma força, fraqueza, oportunidade ou ameaça.</p>}
+        </div>
+        {pode.editarEstrutura && livres.length > 0 && (
+          <select className="input mt-3 max-w-md" value="" onChange={(e) => e.target.value && salvar.mutate({ swot_id: e.target.value, objetivo_id: objetivoId })}>
+            <option value="">+ vincular item da SWOT…</option>
+            {(['forca', 'fraqueza', 'oportunidade', 'ameaca'] as const).map((q) => (
+              <optgroup key={q} label={QUADRANTES[q].nome}>
+                {livres.filter((i) => i.quadrante === q).map((i) => <option key={i.id} value={i.id}>{i.titulo}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        )}
+      </div>
+    </Secao>
   );
 }
