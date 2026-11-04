@@ -34,9 +34,9 @@ export function PageHeader({
       {migalhas && <Breadcrumbs itens={migalhas} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          {sobretitulo && <p className="text-xs font-semibold uppercase tracking-widest text-accent-600">{sobretitulo}</p>}
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink-950">{titulo}</h1>
-          {subtitulo && <p className="mt-1 max-w-3xl text-sm text-ink-600">{subtitulo}</p>}
+          {sobretitulo && <p className="rotulo mb-1 text-accent-600">{sobretitulo}</p>}
+          <h1 className="text-[28px] font-semibold tracking-tight text-ink-950">{titulo}</h1>
+          {subtitulo && <p className="mt-1 max-w-3xl text-[15px] text-ink-500">{subtitulo}</p>}
         </div>
         {acoes && <div className="flex flex-wrap gap-2">{acoes}</div>}
       </div>
@@ -48,7 +48,7 @@ export function Secao({ titulo, acoes, children, className = '' }: { titulo: Rea
   return (
     <section className={`mb-8 ${className}`}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">{titulo}</h2>
+        <h2 className="rotulo">{titulo}</h2>
         {acoes}
       </div>
       {children}
@@ -65,7 +65,7 @@ export function StatusBadge({ status, prazo }: { status: Status; prazo?: string 
 
 export function Progresso({ valor, compacto = false }: { valor: number | null | undefined; compacto?: boolean }) {
   const v = valor ?? 0;
-  const cor = valor === null || valor === undefined ? 'bg-ink-200' : v >= 100 ? 'bg-emerald-600' : v >= 50 ? 'bg-accent-600' : 'bg-amber-500';
+  const cor = valor === null || valor === undefined ? 'bg-ink-200' : v >= 100 ? 'bg-emerald-600' : v >= 50 ? 'bg-accent-500' : 'bg-accent-300';
   return (
     <div className="flex items-center gap-2" title={valor === null || valor === undefined ? 'Sem dados' : `${v}%`}>
       <div className={`w-full overflow-hidden rounded-full bg-ink-100 ${compacto ? 'h-1.5' : 'h-2'}`}>
@@ -81,8 +81,8 @@ export function Progresso({ valor, compacto = false }: { valor: number | null | 
 export function Stat({ label, valor, detalhe }: { label: string; valor: ReactNode; detalhe?: ReactNode }) {
   return (
     <div className="card">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold tabular-nums text-ink-950">{valor}</p>
+      <p className="rotulo">{label}</p>
+      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-ink-950">{valor}</p>
       {detalhe && <p className="mt-1 text-xs text-ink-500">{detalhe}</p>}
     </div>
   );
@@ -94,7 +94,7 @@ export function DrillCard({ to, children, cor }: { to: string; children: ReactNo
     <Link
       to={to}
       className="card group block border-l-4 transition hover:-translate-y-0.5 hover:shadow-md"
-      style={{ borderLeftColor: cor ?? '#1e3a5f' }}
+      style={{ borderLeftColor: cor ?? '#a98445' }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">{children}</div>
@@ -164,5 +164,5 @@ export function Texto({ children }: { children?: string | null }) {
 export function Avatar({ nome, tamanho = 'md' }: { nome: string; tamanho?: 'sm' | 'md' | 'lg' }) {
   const ini = nome.replace(/\(.*?\)/g, '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
   const t = { sm: 'h-7 w-7 text-[10px]', md: 'h-10 w-10 text-xs', lg: 'h-16 w-16 text-lg' }[tamanho];
-  return <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-accent-100 font-bold text-accent-800 ${t}`}>{ini}</span>;
+  return <span className={`inline-flex shrink-0 items-center justify-center rounded-full border border-ink-200 bg-white font-semibold text-ink-600 ${t}`}>{ini}</span>;
 }

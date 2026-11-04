@@ -30,9 +30,9 @@ export function AmbicaoPage() {
       <PageHeader sobretitulo="Direção" titulo="Ambição 2030 — onde queremos chegar"
         acoes={pode.editarEstrutura && <button className="btn-secondary text-xs" onClick={() => edCiclo.editar(ciclo)}>Editar ambição</button>} />
 
-      <div className="card mb-8 bg-accent-900 text-white">
-        <p className="text-xs font-bold uppercase tracking-widest text-accent-200">Ambição do ciclo {ciclo.ano_inicio}–{ciclo.ano_fim}</p>
-        <p className="mt-2 text-xl font-bold leading-snug">{ciclo.ambicao ?? 'A definir.'}</p>
+      <div className="card-destaque mb-8">
+        <p className="rotulo text-accent-700">Ambição do ciclo {ciclo.ano_inicio}–{ciclo.ano_fim}</p>
+        <p className="mt-3 text-2xl font-semibold leading-snug text-ink-950">{ciclo.ambicao ?? 'A definir.'}</p>
       </div>
 
       <Secao titulo={`Scorecard ${anoBase}–${ciclo.ano_fim}`}
@@ -51,7 +51,7 @@ export function AmbicaoPage() {
             </thead>
             {agrupar(daAmbicao).map(([grupo, lista]) => (
               <tbody key={grupo} className="divide-y divide-ink-100">
-                <tr><td colSpan={anos.length + 5} className="bg-accent-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-accent-800">{grupo}</td></tr>
+                <tr><td colSpan={anos.length + 5} className="bg-accent-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-700">{grupo}</td></tr>
                 {lista.map((i) => {
                   const at = atingimento(i, metas, meds, anoRef);
                   const c = i.unidade === '%' ? null : cagr(i.linha_base, meta(i.id, ciclo.ano_fim), ciclo.ano_fim - anoBase);

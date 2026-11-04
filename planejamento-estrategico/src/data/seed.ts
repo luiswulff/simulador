@@ -64,10 +64,10 @@ export function dadosExemplo(): Store {
   ];
 
   const pilares: Tables['pe_pilares'][] = [
-    { id: 'pl-1', ciclo_id: C, nome: 'Crescimento & Mercado', cor: '#1e3a5f', ordem: 0, descricao: 'Receita, novas praças, novos serviços e M&A.' },
-    { id: 'pl-2', ciclo_id: C, nome: 'Clientes & Marca', cor: '#2c6e5a', ordem: 1, descricao: 'Experiência, retenção e reconhecimento de mercado.' },
-    { id: 'pl-3', ciclo_id: C, nome: 'Excelência Operacional & Tecnologia', cor: '#7a5a1e', ordem: 2, descricao: 'Processos, produtividade, dados e automação.' },
-    { id: 'pl-4', ciclo_id: C, nome: 'Pessoas & Partnership', cor: '#6b2c5a', ordem: 3, descricao: 'Atração, carreira, sucessão e modelo societário.' },
+    { id: 'pl-1', ciclo_id: C, nome: 'Crescimento & Mercado', cor: '#a98445', ordem: 0, descricao: 'Receita, novas praças, novos serviços e M&A.' },
+    { id: 'pl-2', ciclo_id: C, nome: 'Clientes & Marca', cor: '#4f8a64', ordem: 1, descricao: 'Experiência, retenção e reconhecimento de mercado.' },
+    { id: 'pl-3', ciclo_id: C, nome: 'Excelência Operacional & Tecnologia', cor: '#5b6fa8', ordem: 2, descricao: 'Processos, produtividade, dados e automação.' },
+    { id: 'pl-4', ciclo_id: C, nome: 'Pessoas & Partnership', cor: '#b5573f', ordem: 3, descricao: 'Atração, carreira, sucessão e modelo societário.' },
   ];
 
   const objetivos: Tables['pe_objetivos'][] = [

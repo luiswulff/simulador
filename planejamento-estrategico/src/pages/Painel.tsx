@@ -38,11 +38,13 @@ export function PainelPage() {
             const at = atingimento(i, metas, meds, anoRef);
             return (
               <Link key={i.id} to={`/indicadores/${i.id}`} className="card block transition hover:shadow-md">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{i.nome}</p>
-                <div className="mt-1 flex items-baseline justify-between gap-2">
-                  <p className="text-2xl font-extrabold tabular-nums">{fmtValor(at.valor ?? null, i.unidade)}</p>
-                  <p className="text-right text-xs text-ink-500">meta {fmtValor(at.meta ?? null, i.unidade)}<br />base {fmtValor(i.linha_base, i.unidade)}</p>
-                </div>
+                <p className="rotulo">{i.nome}</p>
+                <p className="mt-3 text-[34px] font-bold leading-none tabular-nums tracking-tight text-ink-950">
+                  {fmtValor(at.valor ?? i.linha_base ?? null, i.unidade)}
+                </p>
+                <p className="mt-2 text-xs text-ink-500">
+                  {at.valor !== undefined ? `realizado ${anoRef}` : `base ${anoRef - 1}`} · meta {anoRef}: {fmtValor(at.meta ?? null, i.unidade)}
+                </p>
                 <div className="mt-2"><Progresso valor={at.pct} compacto /></div>
               </Link>
             );
