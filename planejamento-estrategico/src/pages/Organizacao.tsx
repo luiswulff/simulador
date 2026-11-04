@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Crown } from 'lucide-react';
 import { useIndex, useList, useRow } from '../data/hooks';
 import { useCiclo } from '../data/ciclo';
+import { useMetricas } from '../data/metricas';
 import { usePode } from '../contexts/AuthContext';
 import { useEditor } from '../components/EntityForm';
 import { Avatar, BotaoNovo, Carregando, DrillCard, PageHeader, Progresso, Secao, Stat, StatusBadge, Texto, Vazio } from '../components/ui';
@@ -52,9 +53,8 @@ export function AreaPage() {
   const acoes = useList('pe_acoes', { area_id: id });
   const todasAcoes = useList('pe_acoes');
   const objs = useList('pe_objetivos', { area_id: id });
-  const inds = useList('pe_indicadores', { area_id: id });
-  const metas = useList('pe_indicador_metas');
-  const meds = useList('pe_indicador_medicoes');
+  const metr = useMetricas();
+  const inds = { data: metr.inds.filter((x) => x.area_id === id) };
   const cargos = useIndex('pe_cargos');
   const idx = useIndex('org_pessoas');
   const { ciclo, anoRef } = useCiclo();
@@ -93,7 +93,7 @@ export function AreaPage() {
       <Secao titulo="Indicadores da área" acoes={pode.editarDaArea(a.id) && <BotaoNovo onClick={() => edInd.novo({ ciclo_id: ciclo.id, escopo: 'area', area_id: a.id, polaridade: 'maior' })}>Indicador</BotaoNovo>}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(inds.data ?? []).map((i) => {
-            const at = atingimento(i, metas.data ?? [], meds.data ?? [], anoRef);
+            const at = atingimento(i, metr.metas, metr.meds, anoRef);
             return (
               <Link key={i.id} to={`/indicadores/${i.id}`} className="card block hover:shadow-md">
                 <p className="text-sm font-semibold">{i.nome}</p>

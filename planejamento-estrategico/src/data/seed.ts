@@ -4,6 +4,7 @@
  * mostrar a navegação e o drill-down. Substitua pelo conteúdo real do planejamento.
  */
 import type { Tables, TableName, Status } from './types';
+import scorecard from './scorecard-2026.json';
 
 type Store = { [K in TableName]?: Tables[K][] };
 
@@ -109,14 +110,17 @@ export function dadosExemplo(): Store {
     indicador: { id, ciclo_id: C, escopo: 'ambicao' as const, nome, unidade, linha_base, polaridade: 'maior' as const, frequencia: 'anual', ...extra },
     metas: metas.map((meta, i) => ({ id: `${id}-m${ANOS[i]}`, indicador_id: id, ano: ANOS[i], meta })),
   });
+  // Scorecard 2026–2030: estrutura e ano-base 2026 do quadro da diretoria (dados reais);
+  // metas 2027–2030 ainda em branco, a definir. Fonte única: scorecard-2026.json
+  const scorecardInds = (scorecard as Partial<Tables['pe_indicadores']>[]).map((s, n) => ({
+    indicador: { ciclo_id: C, escopo: 'ambicao' as const, polaridade: 'maior' as const, frequencia: 'anual', ...s,
+      id: `sc-${s.codigo}`, ordem: n, nome: s.nome! } as Tables['pe_indicadores'],
+    metas: [] as Tables['pe_indicador_metas'][],
+  }));
   const inds = [
-    ind('kpi-rec', 'Receita bruta anual', 'R$ mi', 20, [28, 40, 58, 80]),
-    ind('kpi-soc', 'Número de sócios', 'sócios', 6, [8, 11, 15, 20]),
-    ind('kpi-hc', 'Headcount', 'pessoas', 80, [110, 150, 210, 280]),
-    ind('kpi-pra', 'Praças com escritório', 'praças', 1, [1, 3, 4, 6]),
-    ind('kpi-ebt', 'Margem EBITDA', '%', 18, [20, 22, 24, 25]),
-    ind('kpi-nps', 'NPS de clientes', 'pontos', 55, [60, 65, 70, 75], { escopo: 'objetivo', objetivo_id: 'ob-3', area_id: 'ar-com' }),
-    ind('kpi-ccl', 'Clientes com 2+ linhas de serviço', '%', 15, [22, 30, 38, 45], { escopo: 'objetivo', objetivo_id: 'ob-1', area_id: 'ar-com' }),
+    ...scorecardInds,
+    ind('kpi-nps', 'NPS de clientes (exemplo)', 'pontos', 55, [60, 65, 70, 75], { escopo: 'objetivo', objetivo_id: 'ob-3', area_id: 'ar-com' }),
+    ind('kpi-ccl', 'Clientes com 2+ linhas de serviço (exemplo)', '%', 15, [22, 30, 38, 45], { escopo: 'objetivo', objetivo_id: 'ob-1', area_id: 'ar-com' }),
   ];
 
   const cargos: Tables['pe_cargos'][] = [
@@ -145,19 +149,24 @@ export function dadosExemplo(): Store {
       criterios: '[Exemplo] Eleito pela assembleia de sócios para mandato definido.', direitos: '[Exemplo] Condução executiva da firma.', obrigacoes: '[Exemplo] Prestação de contas trimestral à assembleia.' },
   ];
 
+  // Valuation: ano-base 2026 com receita (R$ 175 mi) e LL (R$ 15 mi) do quadro; crescimento,
+  // EBITDA e múltiplos são ILUSTRATIVOS (CAGR 20% / 30% / 35% — sensibilidade, não meta aprovada).
+  const premissa = '[Exemplo] Premissas ilustrativas. EBITDA ainda não informado: valores estimados apenas para demonstrar o cálculo.';
   const cenarios: Tables['pe_valuation_cenarios'][] = [
-    { id: 'vc-pes', ciclo_id: C, nome: 'Pessimista', multiplo_ebitda: 6, taxa_desconto_pct: 16, crescimento_perpetuo_pct: 3, ordem: 0 },
-    { id: 'vc-base', ciclo_id: C, nome: 'Base', multiplo_ebitda: 8, taxa_desconto_pct: 14, crescimento_perpetuo_pct: 4, ordem: 1 },
-    { id: 'vc-oti', ciclo_id: C, nome: 'Otimista', multiplo_ebitda: 10, taxa_desconto_pct: 13, crescimento_perpetuo_pct: 5, ordem: 2 },
+    { id: 'vc-pes', ciclo_id: C, nome: 'Pessimista', descricao: `${premissa} Receita cresce 20% a.a.`, multiplo_ebitda: 6, taxa_desconto_pct: 16, crescimento_perpetuo_pct: 3, ordem: 0 },
+    { id: 'vc-base', ciclo_id: C, nome: 'Base', descricao: `${premissa} Receita cresce 30% a.a.`, multiplo_ebitda: 8, taxa_desconto_pct: 14, crescimento_perpetuo_pct: 4, ordem: 1 },
+    { id: 'vc-oti', ciclo_id: C, nome: 'Otimista', descricao: `${premissa} Receita cresce 35% a.a.`, multiplo_ebitda: 10, taxa_desconto_pct: 13, crescimento_perpetuo_pct: 5, ordem: 2 },
   ];
-  const fatores: Record<string, number> = { 'vc-pes': 0.75, 'vc-base': 1, 'vc-oti': 1.25 };
+  const crescimento: Record<string, number> = { 'vc-pes': 0.2, 'vc-base': 0.3, 'vc-oti': 0.35 };
+  const margemLL = [15 / 175, 0.1, 0.12, 0.135, 0.15];
   const projecoes: Tables['pe_valuation_projecoes'][] = cenarios.flatMap((c) =>
     [2026, ...ANOS].map((ano, i) => {
-      const receita = ano === 2026 ? 20e6 : [28, 40, 58, 80][i - 1] * 1e6 * fatores[c.id];
-      const margem = [0.18, 0.2, 0.22, 0.24, 0.25][i];
-      return { id: `vp-${c.id}-${ano}`, cenario_id: c.id, ano, receita, ebitda: receita * margem, lucro_liquido: receita * margem * 0.66 };
+      const receita = 175e6 * Math.pow(1 + crescimento[c.id], i);
+      const lucro = i === 0 ? 15e6 : receita * margemLL[i];
+      return { id: `vp-${c.id}-${ano}`, cenario_id: c.id, ano, receita, ebitda: receita * (0.2 + i * 0.01), lucro_liquido: lucro };
     }),
   );
+
 
   return {
     pe_ciclos: [{ id: C, nome: 'Planejamento Estratégico 2027–2030', ano_inicio: 2027, ano_fim: 2030, status: 'ativo',
@@ -175,11 +184,7 @@ export function dadosExemplo(): Store {
     ],
     pe_indicadores: inds.map((i) => i.indicador),
     pe_indicador_metas: inds.flatMap((i) => i.metas),
-    pe_indicador_medicoes: [
-      { id: 'md-1', indicador_id: 'kpi-rec', data_ref: '2027-03-31', valor: 7.1, comentario: '[Exemplo] Acumulado do 1º trimestre' },
-      { id: 'md-2', indicador_id: 'kpi-hc', data_ref: '2027-03-31', valor: 92 },
-      { id: 'md-3', indicador_id: 'kpi-soc', data_ref: '2027-03-31', valor: 6 },
-    ],
+    pe_indicador_medicoes: [],
     pe_cargos: cargos,
     pe_faixas_salariais: faixas,
     pe_carreira_degraus: degraus,

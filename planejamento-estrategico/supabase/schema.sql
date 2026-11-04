@@ -280,6 +280,13 @@ create table if not exists pe_indicadores (
   updated_at timestamptz not null default now()
 );
 
+-- Evolução v0.2: scorecard (grupos), indicadores calculados por fórmula e pendências.
+alter table pe_indicadores add column if not exists codigo text;     -- ex.: receita_global (usado em fórmulas)
+alter table pe_indicadores add column if not exists grupo text;      -- bloco do scorecard: Resultado financeiro, GCC…
+alter table pe_indicadores add column if not exists formula text;    -- ex.: rol / receita_global * 100 (vazio = lançado)
+alter table pe_indicadores add column if not exists pendencia text;  -- o que ainda precisa ser validado na definição
+create unique index if not exists uq_pe_indicadores_codigo on pe_indicadores(ciclo_id, codigo) where codigo is not null;
+
 create table if not exists pe_indicador_metas (
   id uuid primary key default gen_random_uuid(),
   indicador_id uuid not null references pe_indicadores(id) on delete cascade,
@@ -499,7 +506,8 @@ end $$;
 --    security_invoker: as views respeitam o RLS de quem consulta.
 -- ============================================================================
 
-create or replace view vw_pe_acoes with (security_invoker = true) as
+drop view if exists vw_pe_acoes;
+create view vw_pe_acoes with (security_invoker = true) as
 select
   a.id, a.o_que, a.prazo, a.status, a.percentual,
   coalesce(a.prazo < current_date and a.status not in ('concluido', 'cancelado'), false) as atrasada,
@@ -515,9 +523,10 @@ join pe_pilares p on p.id = o.pilar_id
 left join org_pessoas r on r.id = a.responsavel_id
 left join org_areas ar on ar.id = coalesce(a.area_id, i.area_id);
 
-create or replace view vw_pe_indicadores with (security_invoker = true) as
+drop view if exists vw_pe_indicadores;
+create view vw_pe_indicadores with (security_invoker = true) as
 select
-  ind.id, ind.nome, ind.unidade, ind.polaridade, ind.escopo,
+  ind.id, ind.codigo, ind.grupo, ind.nome, ind.unidade, ind.polaridade, ind.escopo, ind.formula,
   ind.objetivo_id, ind.area_id,
   m.ano, m.meta,
   (select valor from pe_indicador_medicoes x

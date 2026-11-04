@@ -134,6 +134,14 @@ export interface Indicador extends Base {
   linha_base?: number | null;
   responsavel_id?: string | null;
   ordem?: number;
+  /** identificador curto usado em fórmulas (ex.: receita_global) */
+  codigo?: string | null;
+  /** bloco do scorecard (ex.: Resultado financeiro, Novas unidades, GCC) */
+  grupo?: string | null;
+  /** se preenchida, o indicador é CALCULADO a partir de outros (ex.: rol / receita_global * 100) */
+  formula?: string | null;
+  /** definição ainda não validada (ex.: "200 são unidades contratadas ou produtivas?") */
+  pendencia?: string | null;
 }
 
 export interface IndicadorMeta {

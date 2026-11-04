@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, CalendarClock } from 'lucide-react';
 import { useList, useIndex } from '../data/hooks';
 import { useCiclo } from '../data/ciclo';
+import { agrupar, useMetricas } from '../data/metricas';
 import { atingimento, progressoPilar } from '../lib/progresso';
 import { acaoAtrasada, fmtData, fmtValor, hojeISO } from '../lib/format';
 import { Carregando, DrillCard, PageHeader, Progresso, Secao, StatusBadge, Vazio } from '../components/ui';
@@ -12,9 +13,7 @@ export function PainelPage() {
   const objetivos = useList('pe_objetivos');
   const inis = useList('pe_iniciativas');
   const acoes = useList('pe_acoes');
-  const inds = useList('pe_indicadores', { escopo: 'ambicao' });
-  const metas = useList('pe_indicador_metas');
-  const meds = useList('pe_indicador_medicoes');
+  const { inds, metas, meds } = useMetricas();
   const marcos = useList('pe_marcos');
   const pessoas = useIndex('org_pessoas');
 
@@ -22,6 +21,8 @@ export function PainelPage() {
   if (!ciclo) return <Vazio>Nenhum ciclo de planejamento cadastrado. Vá em <Link className="underline" to="/configuracoes">Configurações</Link>.</Vazio>;
 
   const A = acoes.data ?? [];
+  // No painel: o primeiro bloco do scorecard (ex.: Resultado financeiro)
+  const [grupoPainel, destaque] = agrupar(inds.filter((i) => i.escopo === 'ambicao'))[0] ?? ['Ambição', []];
   const atrasadas = A.filter(acaoAtrasada);
   const proximas = A.filter((a) => a.prazo && a.prazo >= hojeISO() && a.status !== 'concluido' && a.status !== 'cancelado')
     .sort((a, b) => (a.prazo ?? '').localeCompare(b.prazo ?? '')).slice(0, 6);
@@ -31,16 +32,16 @@ export function PainelPage() {
     <>
       <PageHeader sobretitulo={ciclo.nome} titulo="Painel estratégico" subtitulo={ciclo.ambicao} />
 
-      <Secao titulo={`Ambição — metas ${anoRef}`} acoes={<Link to="/ambicao" className="text-xs font-semibold text-accent-700 hover:underline">Ver 2027–2030 →</Link>}>
+      <Secao titulo={`${grupoPainel} — ${anoRef}`} acoes={<Link to="/ambicao" className="text-xs font-semibold text-accent-700 hover:underline">Scorecard completo →</Link>}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(inds.data ?? []).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)).map((i) => {
-            const at = atingimento(i, metas.data ?? [], meds.data ?? [], anoRef);
+          {destaque.map((i) => {
+            const at = atingimento(i, metas, meds, anoRef);
             return (
               <Link key={i.id} to={`/indicadores/${i.id}`} className="card block transition hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{i.nome}</p>
                 <div className="mt-1 flex items-baseline justify-between gap-2">
                   <p className="text-2xl font-extrabold tabular-nums">{fmtValor(at.valor ?? null, i.unidade)}</p>
-                  <p className="text-xs text-ink-500">meta {fmtValor(at.meta ?? null, i.unidade)}</p>
+                  <p className="text-right text-xs text-ink-500">meta {fmtValor(at.meta ?? null, i.unidade)}<br />base {fmtValor(i.linha_base, i.unidade)}</p>
                 </div>
                 <div className="mt-2"><Progresso valor={at.pct} compacto /></div>
               </Link>

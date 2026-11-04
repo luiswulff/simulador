@@ -92,13 +92,17 @@ export const CAMPOS: Partial<Record<TableName, Campo[]>> = {
   ],
   pe_indicadores: [
     { nome: 'nome', label: 'Indicador (KPI)', tipo: 'text', obrigatorio: true },
+    { nome: 'codigo', label: 'Código (para fórmulas)', tipo: 'text', ajuda: 'Minúsculas e _ , ex.: receita_global' },
+    { nome: 'grupo', label: 'Grupo do scorecard', tipo: 'text', ajuda: 'Ex.: Resultado financeiro, Novas unidades, Carteira (GCC), Produtividade' },
     { nome: 'escopo', label: 'Nível', tipo: 'select', obrigatorio: true, opcoes: [
       { value: 'ambicao', label: 'Ambição (firma)' }, { value: 'objetivo', label: 'Objetivo estratégico' }, { value: 'area', label: 'Área' },
     ] },
     { nome: 'objetivo_id', label: 'Objetivo (se nível = objetivo)', tipo: 'ref', tabela: 'pe_objetivos', rotulo: 'titulo' },
     area,
-    { nome: 'descricao', label: 'Fórmula / fonte do dado', tipo: 'textarea' },
-    { nome: 'unidade', label: 'Unidade', tipo: 'text', ajuda: 'Ex.: R$ mi, %, nº, pessoas' },
+    { nome: 'descricao', label: 'Definição / fonte do dado', tipo: 'textarea' },
+    { nome: 'formula', label: 'Fórmula (indicador calculado)', tipo: 'text', ajuda: 'Use os códigos de outros indicadores: rol / receita_global * 100. Deixe vazio se o valor é lançado.' },
+    { nome: 'pendencia', label: 'Pendência de validação', tipo: 'textarea', ajuda: 'O que ainda falta definir/confirmar. Limpe quando estiver validado.' },
+    { nome: 'unidade', label: 'Unidade', tipo: 'text', ajuda: 'Ex.: R$ mi, R$ mil, %, unidades' },
     { nome: 'polaridade', label: 'Polaridade', tipo: 'select', obrigatorio: true, opcoes: [
       { value: 'maior', label: 'Quanto maior, melhor' }, { value: 'menor', label: 'Quanto menor, melhor' },
     ] },

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useIndex, useList, useRow } from '../data/hooks';
 import { useCiclo } from '../data/ciclo';
+import { useMetricas } from '../data/metricas';
 import { usePode } from '../contexts/AuthContext';
 import { useEditor } from '../components/EntityForm';
 import { BotaoNovo, BotoesLinha, Carregando, DrillCard, PageHeader, Progresso, Secao, StatusBadge, Texto, Vazio } from '../components/ui';
@@ -95,9 +96,8 @@ export function ObjetivoPage() {
   const pilar = useRow('pe_pilares', obj.data?.pilar_id);
   const inis = useList('pe_iniciativas', { objetivo_id: id });
   const acoes = useList('pe_acoes');
-  const inds = useList('pe_indicadores', { objetivo_id: id });
-  const metas = useList('pe_indicador_metas');
-  const meds = useList('pe_indicador_medicoes');
+  const metr = useMetricas();
+  const inds = { data: metr.inds.filter((x) => x.objetivo_id === id) };
   const pessoas = useIndex('org_pessoas');
   const areas = useIndex('org_areas');
   const { ciclo, anoRef } = useCiclo();
@@ -123,7 +123,7 @@ export function ObjetivoPage() {
         acoes={pode.editarEstrutura && <BotaoNovo onClick={() => edInd.novo({ ciclo_id: ciclo.id, escopo: 'objetivo', objetivo_id: o.id, area_id: o.area_id, polaridade: 'maior' })}>Indicador</BotaoNovo>}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(inds.data ?? []).map((i) => {
-            const at = atingimento(i, metas.data ?? [], meds.data ?? [], anoRef);
+            const at = atingimento(i, metr.metas, metr.meds, anoRef);
             return (
               <Link key={i.id} to={`/indicadores/${i.id}`} className="card block hover:shadow-md">
                 <p className="text-sm font-semibold">{i.nome}</p>

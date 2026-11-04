@@ -8,6 +8,8 @@ salários, carreira societária e valuation.
 **Stack:** React + TypeScript + Vite · Tailwind · TanStack Query · Supabase (Postgres, Auth, RLS) · Netlify
 — a mesma do Wulff CRM, para que os apps compartilhem login, cadastro de pessoas e hospedagem.
 
+📊 **Scorecard 2026–2030 (quadro da diretoria, fórmulas e pendências):** [`docs/SCORECARD.md`](docs/SCORECARD.md)
+
 📐 **Estrutura completa, modelo de dados, perfis, integração e roadmap:** [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md)
 
 ---
@@ -34,6 +36,8 @@ npm run dev          # http://localhost:5173
    um novo em [supabase.com](https://supabase.com) (região São Paulo).
 2. **SQL Editor → New query** → cole todo o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
    O script é idempotente: pode ser rodado de novo sempre que o schema for atualizado.
+   Em seguida, rode [`supabase/carga-scorecard-2026.sql`](supabase/carga-scorecard-2026.sql): ele cria o ciclo
+   2027–2030 e o scorecard do quadro da diretoria (ano-base 2026). Também é idempotente e nunca apaga metas lançadas.
 3. **Project Settings → API**: copie a *Project URL* e a chave *anon public*.
    ⚠️ Nunca use a chave `service_role` no front-end.
 
