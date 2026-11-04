@@ -73,7 +73,7 @@ export function ConfiguracoesPage() {
         <Secao titulo="Modo demonstração">
           <div className="card space-y-3 text-sm">
             <p>Sem Supabase configurado, os dados ficam salvos apenas neste navegador. Para colocar online de verdade, siga o README (Supabase + Netlify).</p>
-            <button className="btn-secondary" onClick={() => { if (confirm('Restaurar os dados de exemplo? Suas alterações locais serão perdidas.')) { resetDemo(); qc.invalidateQueries(); } }}>
+            <button className="btn-secondary" onClick={async () => { if (confirm('Restaurar os dados de exemplo? Suas alterações locais serão perdidas.')) { await resetDemo(); qc.invalidateQueries(); } }}>
               Restaurar dados de exemplo
             </button>
           </div>
