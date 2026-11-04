@@ -58,7 +58,7 @@ export function SwotPage() {
 
       {rascunhos.length > 0 && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent-200 bg-accent-50 px-5 py-3 text-sm text-accent-800">
-          <span><b>{rascunhos.length} itens em rascunho.</b> Montados a partir do quadro 2026 e do OnePage. Valide, ajuste ou exclua com os sócios.</span>
+          <span><b>{rascunhos.length} itens em rascunho.</b> SWOT do PEN 2024 atualizada com evidências de 2026 (quadro, OnePage, Cultura Argos, RH, DRE). Valide, ajuste ou exclua com os sócios.</span>
           {pode.editarEstrutura && <button className="btn-secondary px-3 py-1.5 text-xs" onClick={validarTodos}><CheckCheck className="h-3.5 w-3.5" /> Marcar todos como validados</button>}
         </div>
       )}

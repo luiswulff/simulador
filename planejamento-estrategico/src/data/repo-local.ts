@@ -10,7 +10,7 @@ function limparFiltro(filtro?: Filtro) {
   return Object.fromEntries(Object.entries(filtro ?? {}).filter(([, v]) => v !== undefined));
 }
 
-const CHAVE = 'pe-demo-v4';
+const CHAVE = 'pe-demo-v5';
 
 /** Exclusão em cascata no modo demo (espelha os ON DELETE CASCADE do schema.sql). */
 const CASCATA: Partial<Record<TableName, [TableName, string][]>> = {

@@ -7,3 +7,4 @@ dist
 *.tsbuildinfo
 .netlify
 *.zip
+docs/PEN-MESTRE-*.md

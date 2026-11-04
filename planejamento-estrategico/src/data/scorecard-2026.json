@@ -15,7 +15,7 @@
     "unidade": "R$ mi",
     "linha_base": 130,
     "descricao": "Receita do perímetro TaxCo dentro da receita global.",
-    "pendencia": "Confirmar quais empresas, serviços e práticas compõem os R$ 130 mi."
+    "pendencia": "Confirmar o perímetro. Outras fontes: meta de vendas 2026 = R$ 132 mi de receita líquida (Diretrizes e Gaps); projeção por produto 2026 = R$ 102,4 mi (DRE Modelo BU)."
   },
   {
     "codigo": "receita_demais",
@@ -31,8 +31,8 @@
     "nome": "ROL — Retorno Operacional Líquido",
     "unidade": "R$ mi",
     "linha_base": 45,
-    "descricao": "Resultado operacional líquido ANTES do pró-labore dos sócios. Indicador de resultado, não de receita.",
-    "pendencia": "Formalizar a fórmula com a controladoria (quais custos/despesas já estão descontados)."
+    "descricao": "Retorno Operacional Líquido = Receita − Impostos − Comissões − Custos − Despesas, antes do pró-labore dos sócios (DRE Modelo BU). Distribuído em Trabalho 41,5% / Reservas 17% / Dividendos 41,5%.",
+    "pendencia": "Formalizar a fórmula com a controladoria. Histórico: margem ROL 34% (2018), 37% (2019), 56% (2020), 58% (2021); meta 2026 > 35% (Cultura Argos)."
   },
   {
     "codigo": "margem_rol",
@@ -71,7 +71,7 @@
     "nome": "Novas unidades",
     "unidade": "unidades",
     "linha_base": 200,
-    "pendencia": "São unidades contratadas, inauguradas ou produtivas no ano?"
+    "pendencia": "São unidades contratadas, inauguradas ou produtivas no ano? A meta 2026 da Cultura Argos é 800 unidades ATIVAS; o OnePage mostra 355."
   },
   {
     "codigo": "contratos_por_unidade",
