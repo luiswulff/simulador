@@ -44,7 +44,7 @@ npm run dev          # http://localhost:5173
 3. Variáveis de ambiente:
    - `VITE_SUPABASE_URL` = Project URL
    - `VITE_SUPABASE_ANON_KEY` = anon public
-   - `VITE_EMPRESA_NOME` = nome exibido no app (padrão: `Taxco`)
+   - `VITE_EMPRESA_NOME` = nome exibido no app (padrão: `TaxCo`)
 4. **Deploy.**
 
 ### 3. Primeiro acesso
