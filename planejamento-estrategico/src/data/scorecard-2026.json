@@ -1,59 +1,270 @@
 [
-  { "codigo": "receita_global", "grupo": "Resultado financeiro", "nome": "Receita global", "unidade": "R$ mi", "linha_base": 175,
+  {
+    "codigo": "receita_global",
+    "grupo": "Resultado financeiro",
+    "nome": "Receita global",
+    "unidade": "R$ mi",
+    "linha_base": 175,
     "descricao": "Receita externa reconhecida de todas as empresas/marcas do ecossistema, líquida de intercompany.",
-    "pendencia": "Confirmar perímetro (quais empresas entram) e unidade formal (R$ milhões)." },
-  { "codigo": "receita_taxco", "grupo": "Resultado financeiro", "nome": "Receita TaxCo", "unidade": "R$ mi", "linha_base": 130,
+    "pendencia": "Confirmar perímetro (quais empresas entram) e unidade formal (R$ milhões)."
+  },
+  {
+    "codigo": "receita_taxco",
+    "grupo": "Resultado financeiro",
+    "nome": "Receita TaxCo",
+    "unidade": "R$ mi",
+    "linha_base": 130,
     "descricao": "Receita do perímetro TaxCo dentro da receita global.",
-    "pendencia": "Confirmar quais empresas, serviços e práticas compõem os R$ 130 mi." },
-  { "codigo": "receita_demais", "grupo": "Resultado financeiro", "nome": "Receita das demais empresas/marcas", "unidade": "R$ mi",
+    "pendencia": "Confirmar quais empresas, serviços e práticas compõem os R$ 130 mi."
+  },
+  {
+    "codigo": "receita_demais",
+    "grupo": "Resultado financeiro",
+    "nome": "Receita das demais empresas/marcas",
+    "unidade": "R$ mi",
     "formula": "receita_global - receita_taxco",
-    "descricao": "Diferença entre receita global e receita TaxCo. Não confundir com o ROL (a coincidência de R$ 45 mi em 2026 é só numérica)." },
-  { "codigo": "rol", "grupo": "Resultado financeiro", "nome": "ROL — Retorno Operacional Líquido", "unidade": "R$ mi", "linha_base": 45,
+    "descricao": "Diferença entre receita global e receita TaxCo. Não confundir com o ROL (a coincidência de R$ 45 mi em 2026 é só numérica)."
+  },
+  {
+    "codigo": "rol",
+    "grupo": "Resultado financeiro",
+    "nome": "ROL — Retorno Operacional Líquido",
+    "unidade": "R$ mi",
+    "linha_base": 45,
     "descricao": "Resultado operacional líquido ANTES do pró-labore dos sócios. Indicador de resultado, não de receita.",
-    "pendencia": "Formalizar a fórmula com a controladoria (quais custos/despesas já estão descontados)." },
-  { "codigo": "margem_rol", "grupo": "Resultado financeiro", "nome": "Margem ROL", "unidade": "%",
-    "formula": "rol / receita_global * 100" },
-  { "codigo": "ll", "grupo": "Resultado financeiro", "nome": "Lucro líquido", "unidade": "R$ mi", "linha_base": 15 },
-  { "codigo": "margem_liquida", "grupo": "Resultado financeiro", "nome": "Margem líquida", "unidade": "%",
-    "formula": "ll / receita_global * 100" },
-  { "codigo": "ponte_rol_ll", "grupo": "Resultado financeiro", "nome": "Ponte ROL → LL (a reconciliar)", "unidade": "R$ mi", "polaridade": "menor",
+    "pendencia": "Formalizar a fórmula com a controladoria (quais custos/despesas já estão descontados)."
+  },
+  {
+    "codigo": "margem_rol",
+    "grupo": "Resultado financeiro",
+    "nome": "Margem ROL",
+    "unidade": "%",
+    "formula": "rol / receita_global * 100"
+  },
+  {
+    "codigo": "ll",
+    "grupo": "Resultado financeiro",
+    "nome": "Lucro líquido",
+    "unidade": "R$ mi",
+    "linha_base": 15
+  },
+  {
+    "codigo": "margem_liquida",
+    "grupo": "Resultado financeiro",
+    "nome": "Margem líquida",
+    "unidade": "%",
+    "formula": "ll / receita_global * 100"
+  },
+  {
+    "codigo": "ponte_rol_ll",
+    "grupo": "Resultado financeiro",
+    "nome": "Ponte ROL → LL (a reconciliar)",
+    "unidade": "R$ mi",
+    "polaridade": "menor",
     "formula": "rol - ll",
     "descricao": "O que separa o ROL do lucro líquido: pró-labore dos sócios, resultado financeiro, tributos e outros ajustes.",
-    "pendencia": "Abrir os R$ 30 mi de 2026 por natureza. Não presumir que seja tudo pró-labore; pró-labore ≠ distribuição de lucros." },
-
-  { "codigo": "novas_unidades", "grupo": "Novas unidades", "nome": "Novas unidades", "unidade": "unidades", "linha_base": 200,
-    "pendencia": "São unidades contratadas, inauguradas ou produtivas no ano?" },
-  { "codigo": "contratos_por_unidade", "grupo": "Novas unidades", "nome": "Contratos por unidade", "unidade": "contratos/unid.", "linha_base": 1.3,
-    "pendencia": "Média por mês ou por ano? Qual o critério de contagem?" },
-  { "codigo": "contratos_novas_unidades", "grupo": "Novas unidades", "nome": "Contratos gerados pelas novas unidades", "unidade": "contratos",
-    "formula": "novas_unidades * contratos_por_unidade" },
-  { "codigo": "ticket_novas", "grupo": "Novas unidades", "nome": "Ticket médio (novas unidades)", "unidade": "R$ mil",
-    "pendencia": "Definir: valor contratado ou reconhecido? Recorrente, projeto ou êxito?" },
-  { "codigo": "receita_novas_unidades", "grupo": "Novas unidades", "nome": "Receita contratada das novas unidades", "unidade": "R$ mi",
+    "pendencia": "Abrir os R$ 30 mi de 2026 por natureza. Não presumir que seja tudo pró-labore; pró-labore ≠ distribuição de lucros."
+  },
+  {
+    "codigo": "novas_unidades",
+    "grupo": "Rede — novas unidades",
+    "nome": "Novas unidades",
+    "unidade": "unidades",
+    "linha_base": 200,
+    "pendencia": "São unidades contratadas, inauguradas ou produtivas no ano?"
+  },
+  {
+    "codigo": "contratos_por_unidade",
+    "grupo": "Rede — novas unidades",
+    "nome": "Contratos por unidade",
+    "unidade": "contratos/unid.",
+    "linha_base": 1.3,
+    "pendencia": "Média por mês ou por ano? Qual o critério de contagem?"
+  },
+  {
+    "codigo": "contratos_novas_unidades",
+    "grupo": "Rede — novas unidades",
+    "nome": "Contratos gerados pelas novas unidades",
+    "unidade": "contratos",
+    "formula": "novas_unidades * contratos_por_unidade"
+  },
+  {
+    "codigo": "ticket_novas",
+    "grupo": "Rede — novas unidades",
+    "nome": "Ticket médio (novas unidades)",
+    "unidade": "R$ mil",
+    "pendencia": "Definir: valor contratado ou reconhecido? Recorrente, projeto ou êxito?"
+  },
+  {
+    "codigo": "receita_novas_unidades",
+    "grupo": "Rede — novas unidades",
+    "nome": "Receita contratada das novas unidades",
+    "unidade": "R$ mi",
     "formula": "contratos_novas_unidades * ticket_novas / 1000",
-    "descricao": "Valor contratado — não é receita reconhecida no ano (depende do prazo de execução do contrato)." },
-
-  { "codigo": "gcc_base", "grupo": "Carteira existente (GCC)", "nome": "Base GCC (carteira existente)", "unidade": "clientes", "linha_base": 150,
-    "pendencia": "Os 150 são clientes, carteiras ou gestores?" },
-  { "codigo": "contratos_por_cliente", "grupo": "Carteira existente (GCC)", "nome": "Contratos por cliente", "unidade": "contratos/cliente", "linha_base": 1.3,
-    "pendencia": "Denominador (cliente ou carteira) e período (mês ou ano)." },
-  { "codigo": "contratos_gcc", "grupo": "Carteira existente (GCC)", "nome": "Contratos na carteira GCC", "unidade": "contratos",
-    "formula": "gcc_base * contratos_por_cliente" },
-  { "codigo": "ticket_gcc", "grupo": "Carteira existente (GCC)", "nome": "Ticket médio (GCC)", "unidade": "R$ mil" },
-  { "codigo": "receita_gcc", "grupo": "Carteira existente (GCC)", "nome": "Receita contratada da carteira GCC", "unidade": "R$ mi",
-    "formula": "contratos_gcc * ticket_gcc / 1000" },
-
-  { "codigo": "headcount", "grupo": "Produtividade", "nome": "Headcount médio", "unidade": "pessoas",
-    "descricao": "Média do ano (não o número de fechamento)." },
-  { "codigo": "receita_por_hc", "grupo": "Produtividade", "nome": "Receita por headcount", "unidade": "R$ mil",
-    "formula": "receita_global * 1000 / headcount" },
-  { "codigo": "rol_por_hc", "grupo": "Produtividade", "nome": "ROL por headcount", "unidade": "R$ mil",
-    "formula": "rol * 1000 / headcount" },
-
-  { "codigo": "area1_contratos", "grupo": "Áreas", "nome": "Área 1 — nº de contratos", "unidade": "contratos", "pendencia": "Nomear a área." },
-  { "codigo": "area1_receita", "grupo": "Áreas", "nome": "Área 1 — receita", "unidade": "R$ mi", "pendencia": "Nomear a área." },
-  { "codigo": "area2_contratos", "grupo": "Áreas", "nome": "Área 2 — nº de contratos", "unidade": "contratos", "pendencia": "Nomear a área." },
-  { "codigo": "area2_receita", "grupo": "Áreas", "nome": "Área 2 — receita", "unidade": "R$ mi", "pendencia": "Nomear a área." },
-  { "codigo": "area3_contratos", "grupo": "Áreas", "nome": "Área 3 — nº de contratos", "unidade": "contratos", "pendencia": "Nomear a área." },
-  { "codigo": "area3_receita", "grupo": "Áreas", "nome": "Área 3 — receita", "unidade": "R$ mi", "pendencia": "Nomear a área." }
+    "descricao": "Valor contratado — não é receita reconhecida no ano (depende do prazo de execução do contrato)."
+  },
+  {
+    "codigo": "unidades_existentes",
+    "grupo": "Rede — unidades existentes",
+    "nome": "Unidades existentes na rede (início do ano)",
+    "unidade": "unidades",
+    "descricao": "Unidades que já estavam na rede no início do ano. Regra de continuidade: as existentes de um ano = rede total do ano anterior.",
+    "pendencia": "Informar o número de unidades na rede no início de 2026. Os 150 anotados como 'Velhos' no quadro se referem a estas unidades ou à carteira GCC?"
+  },
+  {
+    "codigo": "contratos_por_unidade_existente",
+    "grupo": "Rede — unidades existentes",
+    "nome": "Contratos por unidade existente",
+    "unidade": "contratos/unid.",
+    "pendencia": "Mesmo critério das novas unidades (período e contagem). Unidades maduras tendem a produzir mais que as novas."
+  },
+  {
+    "codigo": "contratos_unidades_existentes",
+    "grupo": "Rede — unidades existentes",
+    "nome": "Contratos gerados pelas unidades existentes",
+    "unidade": "contratos",
+    "formula": "unidades_existentes * contratos_por_unidade_existente"
+  },
+  {
+    "codigo": "ticket_existentes",
+    "grupo": "Rede — unidades existentes",
+    "nome": "Ticket médio (unidades existentes)",
+    "unidade": "R$ mil"
+  },
+  {
+    "codigo": "receita_unidades_existentes",
+    "grupo": "Rede — unidades existentes",
+    "nome": "Receita contratada das unidades existentes",
+    "unidade": "R$ mi",
+    "formula": "contratos_unidades_existentes * ticket_existentes / 1000"
+  },
+  {
+    "codigo": "unidades_saida",
+    "grupo": "Rede — total",
+    "nome": "Unidades que saem da rede no ano",
+    "unidade": "unidades",
+    "polaridade": "menor",
+    "descricao": "Distratos, encerramentos e inativações no ano.",
+    "pendencia": "Definir o critério de saída (distrato formal ou unidade inativa sem contrato há X meses)."
+  },
+  {
+    "codigo": "unidades_rede_total",
+    "grupo": "Rede — total",
+    "nome": "Unidades na rede (fim do ano)",
+    "unidade": "unidades",
+    "formula": "unidades_existentes + novas_unidades - unidades_saida"
+  },
+  {
+    "codigo": "contratos_rede_total",
+    "grupo": "Rede — total",
+    "nome": "Contratos da rede (novas + existentes)",
+    "unidade": "contratos",
+    "formula": "contratos_novas_unidades + contratos_unidades_existentes"
+  },
+  {
+    "codigo": "receita_rede_total",
+    "grupo": "Rede — total",
+    "nome": "Receita contratada da rede",
+    "unidade": "R$ mi",
+    "formula": "receita_novas_unidades + receita_unidades_existentes"
+  },
+  {
+    "codigo": "gcc_base",
+    "grupo": "Carteira existente (GCC)",
+    "nome": "Base GCC (carteira existente)",
+    "unidade": "clientes",
+    "linha_base": 150,
+    "pendencia": "Os 150 são clientes, carteiras ou gestores? No quadro estão sob 'Velhos': confirmar se não são as unidades existentes da rede."
+  },
+  {
+    "codigo": "contratos_por_cliente",
+    "grupo": "Carteira existente (GCC)",
+    "nome": "Contratos por cliente",
+    "unidade": "contratos/cliente",
+    "linha_base": 1.3,
+    "pendencia": "Denominador (cliente ou carteira) e período (mês ou ano)."
+  },
+  {
+    "codigo": "contratos_gcc",
+    "grupo": "Carteira existente (GCC)",
+    "nome": "Contratos na carteira GCC",
+    "unidade": "contratos",
+    "formula": "gcc_base * contratos_por_cliente"
+  },
+  {
+    "codigo": "ticket_gcc",
+    "grupo": "Carteira existente (GCC)",
+    "nome": "Ticket médio (GCC)",
+    "unidade": "R$ mil"
+  },
+  {
+    "codigo": "receita_gcc",
+    "grupo": "Carteira existente (GCC)",
+    "nome": "Receita contratada da carteira GCC",
+    "unidade": "R$ mi",
+    "formula": "contratos_gcc * ticket_gcc / 1000"
+  },
+  {
+    "codigo": "headcount",
+    "grupo": "Produtividade",
+    "nome": "Headcount médio",
+    "unidade": "pessoas",
+    "descricao": "Média do ano (não o número de fechamento)."
+  },
+  {
+    "codigo": "receita_por_hc",
+    "grupo": "Produtividade",
+    "nome": "Receita por headcount",
+    "unidade": "R$ mil",
+    "formula": "receita_global * 1000 / headcount"
+  },
+  {
+    "codigo": "rol_por_hc",
+    "grupo": "Produtividade",
+    "nome": "ROL por headcount",
+    "unidade": "R$ mil",
+    "formula": "rol * 1000 / headcount"
+  },
+  {
+    "codigo": "area1_contratos",
+    "grupo": "Áreas",
+    "nome": "Área 1 — nº de contratos",
+    "unidade": "contratos",
+    "pendencia": "Nomear a área."
+  },
+  {
+    "codigo": "area1_receita",
+    "grupo": "Áreas",
+    "nome": "Área 1 — receita",
+    "unidade": "R$ mi",
+    "pendencia": "Nomear a área."
+  },
+  {
+    "codigo": "area2_contratos",
+    "grupo": "Áreas",
+    "nome": "Área 2 — nº de contratos",
+    "unidade": "contratos",
+    "pendencia": "Nomear a área."
+  },
+  {
+    "codigo": "area2_receita",
+    "grupo": "Áreas",
+    "nome": "Área 2 — receita",
+    "unidade": "R$ mi",
+    "pendencia": "Nomear a área."
+  },
+  {
+    "codigo": "area3_contratos",
+    "grupo": "Áreas",
+    "nome": "Área 3 — nº de contratos",
+    "unidade": "contratos",
+    "pendencia": "Nomear a área."
+  },
+  {
+    "codigo": "area3_receita",
+    "grupo": "Áreas",
+    "nome": "Área 3 — receita",
+    "unidade": "R$ mi",
+    "pendencia": "Nomear a área."
+  }
 ]

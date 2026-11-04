@@ -53,7 +53,7 @@ class SupabaseRepo implements DataRepo {
   }
 }
 
-const CHAVE = 'pe-demo-v2';
+const CHAVE = 'pe-demo-v3';
 
 /** Exclusão em cascata no modo demo (espelha os ON DELETE CASCADE do schema.sql). */
 const CASCATA: Partial<Record<TableName, [TableName, string][]>> = {
